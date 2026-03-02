@@ -229,6 +229,11 @@ const S = {
   gameMenu: false,
   disappearMenu: false,
   translateMsg: null,
+  adminPanel: false,
+  adminTab: "overview",
+  adminData: null,
+  adminMsgSearch: "",
+  adminShowDeleted: false,
   vipCode: localStorage.getItem("fc_vip")||"",
 };
 
@@ -686,6 +691,348 @@ async function ensureYouChat(name){
   }
 }
 
+
+/* ==========================================
+   ADMIN PANEL
+========================================== */
+const ADMIN_CODE = "SIMO511"; // Only LEAD can access admin
+
+function isAdmin(){
+  return S.vipCode && S.vipCode.toUpperCase() === ADMIN_CODE;
+}
+
+async function loadAdminData(){
+  if(!window.__fb || window.__fb.DEMO_MODE) return;
+  const {db, ref, onValue} = window.__fb;
+  
+  // Load all messages from all chats
+  S.adminData = S.adminData || {users:{}, chats:{}, messages:{}, loading:true};
+  S.adminData.loading = true;
+  
+  // Load users
+  onValue(ref(db,"users"), snap => {
+    S.adminData.users = snap.val() || {};
+    S.adminData.loading = false;
+    if(S.adminPanel) render();
+  });
+  
+  // Load chats
+  onValue(ref(db,"chats"), snap => {
+    S.adminData.chats = snap.val() || {};
+    if(S.adminPanel) render();
+  });
+  
+  // Load ALL messages
+  onValue(ref(db,"messages"), snap => {
+    S.adminData.messages = snap.val() || {};
+    if(S.adminPanel) render();
+  });
+}
+
+async function adminDeleteUser(name){
+  if(!confirm("Delete user: "+name+"?")) return;
+  const {db,ref,set,remove} = window.__fb;
+  await set(ref(db,"users/"+name), null);
+  showToast("User deleted: "+name, "🗑️");
+  render();
+}
+
+async function adminDeleteMessage(chatId, msgId){
+  const {db,ref,set} = window.__fb;
+  await set(ref(db,"messages/"+chatId+"/"+msgId+"/deleted"), true);
+  await set(ref(db,"messages/"+chatId+"/"+msgId+"/text"), "Deleted by admin");
+  showToast("Message deleted", "🗑️");
+}
+
+async function adminSetVIP(name, code){
+  const {db,ref,set} = window.__fb;
+  await set(ref(db,"users/"+name+"/vipCode"), code);
+  showToast("VIP set for "+name, "👑");
+  render();
+}
+
+async function adminBanUser(name){
+  if(!confirm("Ban user: "+name+"?")) return;
+  const {db,ref,set} = window.__fb;
+  await set(ref(db,"users/"+name+"/banned"), true);
+  showToast("User banned: "+name, "🚫");
+  render();
+}
+
+function renderAdminPanel(){
+  const data = S.adminData || {};
+  const users = Object.values(data.users || {});
+  const chats = Object.values(data.chats || {});
+  const allMessages = [];
+  
+  // Flatten all messages
+  Object.entries(data.messages || {}).forEach(([chatId, msgs]) => {
+    const chat = (data.chats||{})[chatId];
+    const chatName = chat ? chat.name : chatId;
+    Object.values(msgs || {}).forEach(msg => {
+      if(msg && msg.ts) allMessages.push({...msg, chatId, chatName});
+    });
+  });
+  allMessages.sort((a,b) => (b.ts||0) - (a.ts||0));
+  
+  // Online users
+  const now = Date.now();
+  const onlineUsers = users.filter(u => u.online);
+  const totalMsgs = allMessages.length;
+
+  const wrap = h("div", {style:{position:"fixed",inset:"0",background:"var(--bg0)",zIndex:"3000",display:"flex",flexDirection:"column",overflow:"hidden"}});
+  
+  // Header
+  const hdr = h("div", {style:{background:"linear-gradient(135deg,#1a0a00,#2a1500)",borderBottom:"1px solid #f59e0b44",padding:"14px 20px",display:"flex",alignItems:"center",gap:"12px",flexShrink:"0"}});
+  hdr.appendChild(h("div",{style:{fontSize:"22px"}},"👑"));
+  const htxt = h("div",{style:{flex:"1"}});
+  htxt.appendChild(h("div",{style:{fontSize:"15px",fontWeight:"900",color:"#f59e0b"}},"Admin Control Panel"));
+  htxt.appendChild(h("div",{style:{fontSize:"10px",color:"rgba(245,158,11,.6)",fontFamily:"JetBrains Mono,monospace"}},"SIMO511 — LEAD ACCESS"));
+  hdr.appendChild(htxt);
+  const closeBtn = h("button",{style:{background:"rgba(245,158,11,.15)",border:"1px solid #f59e0b44",borderRadius:"10px",padding:"8px 14px",color:"#f59e0b",cursor:"pointer",fontSize:"12px",fontWeight:"800",fontFamily:"'Plus Jakarta Sans',sans-serif"},onClick:()=>{S.adminPanel=false;render();}},"✕ Close");
+  hdr.appendChild(closeBtn);
+  wrap.appendChild(hdr);
+
+  // Tab bar
+  const tabs = h("div",{style:{display:"flex",background:"var(--bg1)",borderBottom:"1px solid var(--bd)",flexShrink:"0"}});
+  const tabList = [
+    {id:"overview", icon:"📊", label:"Overview"},
+    {id:"users",    icon:"👥", label:"Users ("+users.length+")"},
+    {id:"messages", icon:"💬", label:"Messages ("+totalMsgs+")"},
+    {id:"chats",    icon:"🗂️", label:"Chats ("+chats.length+")"},
+  ];
+  const adminTab = S.adminTab || "overview";
+  tabList.forEach(tab => {
+    const tb = h("button",{style:{
+      flex:"1",padding:"10px 6px",background:"transparent",border:"none",
+      borderBottom:"2px solid "+(adminTab===tab.id?"#f59e0b":"transparent"),
+      color:adminTab===tab.id?"#f59e0b":"var(--t3)",cursor:"pointer",
+      fontSize:"10px",fontWeight:"800",fontFamily:"'Plus Jakarta Sans',sans-serif",
+      transition:"all .2s"
+    },onClick:()=>{S.adminTab=tab.id;render();}},tab.icon+" "+tab.label);
+    tabs.appendChild(tb);
+  });
+  wrap.appendChild(tabs);
+
+  // Content
+  const content = h("div",{style:{flex:"1",overflowY:"auto",padding:"16px"}});
+
+  if(adminTab === "overview"){
+    // Stats cards
+    const grid = h("div",{style:{display:"grid",gridTemplateColumns:"1fr 1fr",gap:"10px",marginBottom:"16px"}});
+    const stats = [
+      {icon:"👥", label:"Total Users",    value:users.length,     color:"#3b82f6"},
+      {icon:"🟢", label:"Online Now",     value:onlineUsers.length, color:"#22c55e"},
+      {icon:"💬", label:"Total Messages", value:totalMsgs,        color:"#a78bfa"},
+      {icon:"🗂️", label:"Total Chats",   value:chats.length,     color:"#f59e0b"},
+    ];
+    stats.forEach(s => {
+      const card = h("div",{style:{background:"linear-gradient(135deg,"+s.color+"15,"+s.color+"08)",border:"1px solid "+s.color+"33",borderRadius:"14px",padding:"14px",textAlign:"center"}});
+      card.appendChild(h("div",{style:{fontSize:"24px",marginBottom:"4px"}},s.icon));
+      card.appendChild(h("div",{style:{fontSize:"22px",fontWeight:"900",color:s.color}},s.value));
+      card.appendChild(h("div",{style:{fontSize:"10px",color:"var(--t3)",fontWeight:"700"}},s.label));
+      grid.appendChild(card);
+    });
+    content.appendChild(grid);
+
+    // Recent messages preview
+    content.appendChild(h("div",{style:{fontSize:"12px",fontWeight:"800",color:"var(--t2)",marginBottom:"10px"}},"🕐 Recent Activity"));
+    allMessages.slice(0,10).forEach(msg => {
+      if(msg.deleted) return;
+      const row = h("div",{style:{background:"var(--bg1)",border:"1px solid var(--bd)",borderRadius:"12px",padding:"10px 12px",marginBottom:"8px"}});
+      const top = h("div",{style:{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:"4px"}});
+      top.appendChild(h("span",{style:{fontSize:"11px",fontWeight:"800",color:"var(--ac)"}},msg.from));
+      top.appendChild(h("span",{style:{fontSize:"9px",color:"var(--t3)",fontFamily:"JetBrains Mono,monospace"}},new Date(msg.ts).toLocaleString()));
+      row.appendChild(top);
+      row.appendChild(h("div",{style:{fontSize:"11px",color:"var(--t2)",marginBottom:"4px"}},msg.text && msg.text.length > 80 ? msg.text.slice(0,80)+"..." : (msg.text||"[media]")));
+      row.appendChild(h("div",{style:{fontSize:"9px",color:"var(--t3)"}},"in: "+msg.chatName));
+      content.appendChild(row);
+    });
+  }
+
+  else if(adminTab === "users"){
+    content.appendChild(h("div",{style:{fontSize:"12px",fontWeight:"800",color:"var(--t2)",marginBottom:"12px"}},"👥 All Users"));
+    if(users.length === 0){
+      content.appendChild(h("div",{style:{textAlign:"center",color:"var(--t3)",padding:"30px"}},"No users yet"));
+    }
+    users.sort((a,b)=>(b.ts||0)-(a.ts||0)).forEach(user => {
+      if(!user.name) return;
+      const card = h("div",{style:{background:"var(--bg1)",border:"1px solid "+(user.online?"rgba(34,197,94,.3)":"var(--bd)"),borderRadius:"14px",padding:"12px",marginBottom:"10px"}});
+      
+      const top = h("div",{style:{display:"flex",alignItems:"center",gap:"10px",marginBottom:"8px"}});
+      top.appendChild(av(user.name, 38, {online:!!user.online}));
+      const info = h("div",{style:{flex:"1"}});
+      info.appendChild(h("div",{style:{fontSize:"13px",fontWeight:"800",color:"var(--t1)"}},user.name));
+      info.appendChild(h("div",{style:{fontSize:"10px",color:"var(--t3)"}},user.status||"No status"));
+      top.appendChild(info);
+      
+      const badge = h("div",{style:{textAlign:"right"}});
+      badge.appendChild(h("div",{style:{fontSize:"10px",fontWeight:"700",color:user.online?"#22c55e":"#6b7280"}},user.online?"🟢 Online":"⚫ Offline"));
+      if(user.vipCode) badge.appendChild(h("div",{style:{fontSize:"9px",color:"#f59e0b",marginTop:"2px"}},"👑 "+user.vipCode));
+      if(user.banned) badge.appendChild(h("div",{style:{fontSize:"9px",color:"#ef4444",marginTop:"2px"}},"🚫 BANNED"));
+      top.appendChild(badge);
+      card.appendChild(top);
+
+      // Actions
+      const acts = h("div",{style:{display:"flex",gap:"6px",flexWrap:"wrap"}});
+      
+      // Count user messages
+      let userMsgCount = allMessages.filter(m => m.from === user.name).length;
+      acts.appendChild(h("span",{style:{fontSize:"9px",color:"var(--t3)",padding:"3px 8px",background:"var(--bg2)",borderRadius:"20px"}},userMsgCount+" messages"));
+      acts.appendChild(h("span",{style:{fontSize:"9px",color:"var(--t3)",padding:"3px 8px",background:"var(--bg2)",borderRadius:"20px"}},"Joined: "+new Date(user.ts||0).toLocaleDateString()));
+
+      if(user.name !== S.user?.name){
+        // Set VIP button
+        const vipBtn = h("button",{style:{fontSize:"9px",padding:"3px 8px",background:"rgba(245,158,11,.15)",border:"1px solid #f59e0b44",borderRadius:"20px",color:"#f59e0b",cursor:"pointer",fontFamily:"'Plus Jakarta Sans',sans-serif",fontWeight:"700"},
+          onClick:()=>{
+            const codes = Object.keys(VIP_CODES).join(", ");
+            const code = prompt("Set VIP code for "+user.name+" ("+codes+")");
+            if(code) adminSetVIP(user.name, code.toUpperCase());
+          }},"👑 Set VIP");
+        acts.appendChild(vipBtn);
+
+        // Ban button
+        const banBtn = h("button",{style:{fontSize:"9px",padding:"3px 8px",background:user.banned?"rgba(34,197,94,.15)":"rgba(239,68,68,.15)",border:"1px solid "+(user.banned?"rgba(34,197,94,.3)":"rgba(239,68,68,.3)"),borderRadius:"20px",color:user.banned?"#22c55e":"#ef4444",cursor:"pointer",fontFamily:"'Plus Jakarta Sans',sans-serif",fontWeight:"700"},
+          onClick:async()=>{
+            if(user.banned){
+              const {db,ref,set} = window.__fb;
+              await set(ref(db,"users/"+user.name+"/banned"), false);
+              showToast("User unbanned", "✅");
+            } else {
+              adminBanUser(user.name);
+            }
+            render();
+          }},user.banned?"✅ Unban":"🚫 Ban");
+        acts.appendChild(banBtn);
+
+        // Delete button
+        const delBtn = h("button",{style:{fontSize:"9px",padding:"3px 8px",background:"rgba(239,68,68,.1)",border:"1px solid rgba(239,68,68,.25)",borderRadius:"20px",color:"#ef4444",cursor:"pointer",fontFamily:"'Plus Jakarta Sans',sans-serif",fontWeight:"700"},
+          onClick:()=>adminDeleteUser(user.name)},"🗑️ Delete");
+        acts.appendChild(delBtn);
+      } else {
+        acts.appendChild(h("span",{style:{fontSize:"9px",color:"#f59e0b",padding:"3px 8px",background:"rgba(245,158,11,.1)",borderRadius:"20px"}},"👑 You (Admin)"));
+      }
+      card.appendChild(acts);
+      content.appendChild(card);
+    });
+  }
+
+  else if(adminTab === "messages"){
+    // Filter controls
+    const filterRow = h("div",{style:{display:"flex",gap:"8px",marginBottom:"12px",flexWrap:"wrap",alignItems:"center"}});
+    filterRow.appendChild(h("div",{style:{fontSize:"12px",fontWeight:"800",color:"var(--t2)",flex:"1"}},"💬 All Messages"));
+    
+    const searchInp = h("input",{className:"inp",placeholder:"🔍 Search messages...",style:{flex:"2",minWidth:"120px",fontSize:"11px",padding:"6px 10px"}});
+    searchInp.value = S.adminMsgSearch || "";
+    searchInp.addEventListener("input", e => {S.adminMsgSearch = e.target.value; render();});
+    filterRow.appendChild(searchInp);
+    content.appendChild(filterRow);
+
+    const searchQ = (S.adminMsgSearch||"").toLowerCase();
+    const filtered = allMessages.filter(msg => {
+      if(msg.deleted && !S.adminShowDeleted) return false;
+      if(!searchQ) return true;
+      return (msg.text||"").toLowerCase().includes(searchQ) || 
+             (msg.from||"").toLowerCase().includes(searchQ) ||
+             (msg.chatName||"").toLowerCase().includes(searchQ);
+    });
+
+    // Show deleted toggle
+    const toggleRow = h("div",{style:{display:"flex",gap:"8px",marginBottom:"12px",alignItems:"center"}});
+    const delToggle = h("button",{style:{fontSize:"10px",padding:"4px 10px",background:S.adminShowDeleted?"rgba(239,68,68,.2)":"var(--bg2)",border:"1px solid "+(S.adminShowDeleted?"rgba(239,68,68,.4)":"var(--bd2)"),borderRadius:"20px",color:S.adminShowDeleted?"#ef4444":"var(--t3)",cursor:"pointer",fontFamily:"'Plus Jakarta Sans',sans-serif",fontWeight:"700"},
+      onClick:()=>{S.adminShowDeleted=!S.adminShowDeleted;render();}},(S.adminShowDeleted?"✅":"☐")+" Show deleted");
+    toggleRow.appendChild(delToggle);
+    toggleRow.appendChild(h("span",{style:{fontSize:"10px",color:"var(--t3)"}},filtered.length+" messages"));
+    content.appendChild(toggleRow);
+
+    if(filtered.length === 0){
+      content.appendChild(h("div",{style:{textAlign:"center",color:"var(--t3)",padding:"30px"}},"No messages found"));
+    }
+
+    filtered.forEach(msg => {
+      const card = h("div",{style:{
+        background:msg.deleted?"rgba(239,68,68,.05)":"var(--bg1)",
+        border:"1px solid "+(msg.deleted?"rgba(239,68,68,.2)":"var(--bd)"),
+        borderRadius:"12px",padding:"10px 12px",marginBottom:"8px",
+        opacity:msg.deleted?"0.6":"1"
+      }});
+      
+      const top = h("div",{style:{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:"6px"}});
+      const left = h("div",{style:{display:"flex",alignItems:"center",gap:"8px"}});
+      left.appendChild(av(msg.from||"?", 28, {online:false}));
+      const nameInfo = h("div");
+      nameInfo.appendChild(h("div",{style:{fontSize:"11px",fontWeight:"800",color:"var(--ac)"}},msg.from||"Unknown"));
+      nameInfo.appendChild(h("div",{style:{fontSize:"9px",color:"var(--t3)",fontFamily:"JetBrains Mono,monospace"}},new Date(msg.ts||0).toLocaleString()));
+      left.appendChild(nameInfo);
+      top.appendChild(left);
+      
+      const right = h("div",{style:{display:"flex",gap:"5px",alignItems:"center"}});
+      if(msg.deleted) right.appendChild(h("span",{style:{fontSize:"9px",color:"#ef4444",fontWeight:"700"}},"DELETED"));
+      if(msg.edited) right.appendChild(h("span",{style:{fontSize:"9px",color:"#f59e0b",fontWeight:"700"}},"EDITED"));
+      if(!msg.deleted){
+        const delBtn = h("button",{style:{fontSize:"9px",padding:"2px 7px",background:"rgba(239,68,68,.1)",border:"1px solid rgba(239,68,68,.25)",borderRadius:"8px",color:"#ef4444",cursor:"pointer",fontFamily:"'Plus Jakarta Sans',sans-serif"},
+          onClick:()=>adminDeleteMessage(msg.chatId, msg.id)},"🗑️");
+        right.appendChild(delBtn);
+      }
+      top.appendChild(right);
+      card.appendChild(top);
+
+      // Message content
+      const msgText = h("div",{style:{fontSize:"12px",color:msg.deleted?"#ef4444":"var(--t1)",lineHeight:"1.5",wordBreak:"break-word",marginBottom:"4px"}},
+        msg.deleted ? "🗑️ "+msg.text : (msg.type==="voice"?"🎤 Voice message ("+msg.text+"s)":(msg.text||"[no text]")));
+      card.appendChild(msgText);
+      
+      // Chat info
+      card.appendChild(h("div",{style:{fontSize:"9px",color:"var(--t3)"}},"📁 "+msg.chatName+(msg.replyTo?" | ↩️ Reply":"")+(msg.starred?" | ⭐":"")));
+      
+      content.appendChild(card);
+    });
+  }
+
+  else if(adminTab === "chats"){
+    content.appendChild(h("div",{style:{fontSize:"12px",fontWeight:"800",color:"var(--t2)",marginBottom:"12px"}},"🗂️ All Chats"));
+    if(chats.length === 0){
+      content.appendChild(h("div",{style:{textAlign:"center",color:"var(--t3)",padding:"30px"}},"No chats yet"));
+    }
+    chats.sort((a,b)=>(b.ts||0)-(a.ts||0)).forEach(chat => {
+      if(!chat.id) return;
+      const chatMsgs = Object.values((data.messages||{})[chat.id]||{});
+      const card = h("div",{style:{background:"var(--bg1)",border:"1px solid var(--bd)",borderRadius:"14px",padding:"12px",marginBottom:"10px"}});
+      
+      const top = h("div",{style:{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:"8px"}});
+      const left = h("div");
+      left.appendChild(h("div",{style:{fontSize:"13px",fontWeight:"800",color:"var(--t1)",marginBottom:"2px"}},(chat.type==="group"?"👥":"💬")+" "+(chat.name||chat.id)));
+      left.appendChild(h("div",{style:{fontSize:"9px",color:"var(--t3)",fontFamily:"JetBrains Mono,monospace"}},"ID: "+chat.id.slice(0,20)+"..."));
+      top.appendChild(left);
+      top.appendChild(h("div",{style:{fontSize:"10px",fontWeight:"700",color:"#a78bfa"}},chatMsgs.length+" msgs"));
+      card.appendChild(top);
+
+      if(chat.members && chat.members.length){
+        const mem = h("div",{style:{display:"flex",gap:"6px",flexWrap:"wrap",marginBottom:"8px"}});
+        chat.members.forEach(m => mem.appendChild(h("span",{style:{fontSize:"9px",color:"var(--t2)",background:"var(--bg2)",border:"1px solid var(--bd2)",borderRadius:"20px",padding:"2px 7px"}},m)));
+        card.appendChild(mem);
+      }
+
+      if(chat.lastMsg){
+        card.appendChild(h("div",{style:{fontSize:"10px",color:"var(--t3)",fontStyle:"italic",marginBottom:"8px"}},'"'+(chat.lastMsg.slice(0,60))+'"'));
+      }
+
+      // View messages button
+      const viewBtn = h("button",{style:{fontSize:"10px",padding:"5px 12px",background:"rgba(167,139,250,.15)",border:"1px solid rgba(167,139,250,.3)",borderRadius:"20px",color:"#a78bfa",cursor:"pointer",fontFamily:"'Plus Jakarta Sans',sans-serif",fontWeight:"700"},
+        onClick:()=>{
+          S.adminTab="messages";
+          S.adminMsgSearch=chat.name||"";
+          render();
+        }},"💬 View Messages");
+      card.appendChild(viewBtn);
+      content.appendChild(card);
+    });
+  }
+
+  wrap.appendChild(content);
+  return wrap;
+}
+
 /* ==========================================
    RENDER FUNCTIONS
 ========================================== */
@@ -724,6 +1071,7 @@ function render(){
   if(S.storyModal)root.appendChild(renderStoryModal());
   if(S.viewStory)root.appendChild(renderViewStory());
   if(S.gameState&&S.gameType&&GAMES[S.gameType])root.appendChild(GAMES[S.gameType].render(S.gameState,S.activeChat?.id));
+  if(S.adminPanel&&isAdmin())root.appendChild(renderAdminPanel());
 
   // Scroll to bottom
   setTimeout(()=>{const e=document.getElementById("msgs-end");if(e)e.scrollIntoView({behavior:"smooth"});},50);
@@ -1155,6 +1503,17 @@ function renderChatPanel(){
       dm.appendChild(btn);
     });
     wrap.appendChild(dm);
+  }
+  // Admin button (only for LEAD)
+  if(isAdmin()){
+    const adminBtn=h("button",{className:"ib",title:"Admin Panel",onClick:()=>{
+      S.adminPanel=true;
+      S.adminTab="overview";
+      loadAdminData();
+      render();
+    }});
+    adminBtn.appendChild(h("span",{style:{fontSize:"16px",filter:"drop-shadow(0 0 4px #f59e0b)"}},"👑"));
+    hdr.appendChild(adminBtn);
   }
   hdr.appendChild(moreWrap);wrap.appendChild(hdr);
 
