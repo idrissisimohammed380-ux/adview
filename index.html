@@ -67,9 +67,9 @@ body{font-family:'Plus Jakarta Sans','Noto Sans Arabic',sans-serif;background:va
 .msg-row.own{flex-direction:row-reverse}
 .bubble{padding:9px 13px;border-radius:18px;max-width:min(320px,75vw);min-width:60px;font-size:13px;line-height:1.5;word-break:break-word;position:relative;cursor:pointer;transition:filter .15s;box-shadow:0 2px 8px rgba(0,0,0,.15)}
 .bubble:hover{filter:brightness(1.08)}
-.msg-row.own .bubble{background:linear-gradient(135deg,#0ea5e9,#0284c7);color:#fff;border-bottom-right-radius:4px}
-.msg-row:not(.own) .bubble{background:var(--bg3);color:var(--t1);border-bottom-left-radius:4px}
-.msg-row.you-msg .bubble{background:linear-gradient(135deg,#1d4ed8,#1e40af)!important;color:#eff6ff!important;border-bottom-left-radius:4px!important;border-bottom-right-radius:18px!important}
+.msg-row.own .bubble,.bubble.own{background:linear-gradient(135deg,#0ea5e9,#0284c7);color:#fff;border-bottom-right-radius:4px}
+.msg-row:not(.own) .bubble,.bubble.other{background:var(--bg3);color:var(--t1);border-bottom-left-radius:4px}
+.msg-row.you-msg .bubble,.bubble.you-msg{background:linear-gradient(135deg,#1d4ed8,#1e40af)!important;color:#eff6ff!important;border-bottom-left-radius:4px!important;border-bottom-right-radius:18px!important}
 .bubble-footer{display:flex;align-items:center;gap:3px;margin-top:3px;justify-content:flex-end}
 .bubble-footer span{font-size:9px;opacity:.55;font-family:'JetBrains Mono',monospace;white-space:nowrap}
 .date-sep{text-align:center;margin:10px 0;display:flex;align-items:center;gap:8px}
@@ -432,7 +432,7 @@ body::before{content:'';position:fixed;inset:0;pointer-events:none;z-index:0;bac
 .unread-badge,.unread{animation:badgePop .4s cubic-bezier(.34,1.56,.64,1)}
 
 /* ── New message glow (own) ── */
-.msg-row.own .bubble{
+.msg-row.own .bubble,.bubble.own{
   background:linear-gradient(135deg,#0ea5e9,#0284c7) !important;
   box-shadow:0 4px 16px rgba(14,165,233,.3), 0 1px 3px rgba(0,0,0,.2) !important}
 
@@ -1243,8 +1243,9 @@ async function ensureYouChat(name){
 const ADMIN_CODE = "SIMO511"; // Only LEAD can access admin
 
 function isAdmin(){
+  // ONLY simo511 — no exceptions, no bypass
   if(!S.user) return false;
-  return isOwnerAccount(S.user.name);
+  return S.user.name && S.user.name.toLowerCase()==="simo511";
 }
 function isOwnerCode(code){
   return code==="SIMO511"||code==="SIMO511_OWNER"||code==="FROST2025";
@@ -1279,11 +1280,32 @@ async function loadAdminData(){
 }
 
 async function adminDeleteUser(name){
-  if(!confirm("Delete user: "+name+"?")) return;
-  const {db,ref,set,remove} = window.__fb;
-  await set(ref(db,"users/"+name), null);
-  showToast("User deleted: "+name, "🗑️");
-  render();
+  if(!confirm("حذف المستخدم: "+name+"?\nهذا الإجراء لا يمكن التراجع عنه!")) return;
+  try{
+    if(!window.__fb||window.__fb.DEMO_MODE){
+      if(S.adminData&&S.adminData.users) delete S.adminData.users[name];
+      showToast("تم الحذف: "+name,"🗑️"); render(); return;
+    }
+    const {db,ref,set} = window.__fb;
+    // Delete user data
+    await set(ref(db,"users/"+name), null);
+    // Also remove from chats members
+    if(S.adminData&&S.adminData.chats){
+      for(const chat of Object.values(S.adminData.chats||{})){
+        if(chat.members&&chat.members.includes(name)){
+          const newMembers=chat.members.filter(m=>m!==name);
+          await set(ref(db,"chats/"+chat.id+"/members"),newMembers);
+        }
+      }
+    }
+    showToast("✅ تم حذف المستخدم: "+name,"🗑️");
+    // Refresh admin data
+    if(S.adminData&&S.adminData.users) delete S.adminData.users[name];
+    render();
+  }catch(e){
+    showToast("❌ خطأ: "+e.message,"");
+    console.error(e);
+  }
 }
 
 async function adminDeleteMessage(chatId, msgId){
@@ -1766,6 +1788,18 @@ function render(){
 
   // Scroll to bottom
   setTimeout(()=>{const e=document.getElementById("msgs-end");if(e)e.scrollIntoView({behavior:"smooth"});},50);
+  // Restore chat input focus after render (prevents keyboard dismiss on mobile)
+  const wasActive = document.activeElement?.id;
+  if(wasActive==="chat-input"){
+    requestAnimationFrame(()=>{
+      const inp=document.getElementById("chat-input");
+      if(inp&&document.activeElement!==inp){
+        const len=inp.value.length;
+        inp.focus();
+        try{inp.setSelectionRange(len,len);}catch(e){}
+      }
+    });
+  }
   // Init particles
   setTimeout(initParticles,100);
 }
@@ -2581,7 +2615,7 @@ function renderMessage(m,chat){
   }
 
   // Message row
-  const row=h("div",{style:{display:"flex",alignItems:"flex-end",gap:"6px",flexDirection:own?"row-reverse":"row",maxWidth:"80%"}});
+  const row=h("div",{className:"msg-row"+(own?" own":"")+(isYouChat?" you-msg":""),style:{display:"flex",alignItems:"flex-end",gap:"6px",flexDirection:own?"row-reverse":"row",maxWidth:"80%"}});
 
   if(!own&&chat.type!=="dm")row.appendChild(av(m.from,22,{}));
 
