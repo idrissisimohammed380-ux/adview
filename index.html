@@ -854,6 +854,217 @@ body::before {
     radial-gradient(ellipse 50% 35% at 90% 85%, rgba(14,165,233,.04), transparent 60%) !important;
 }
 
+
+/* ══════════════════════════════════════════════════════
+   MOBILE FIXES v9.4
+══════════════════════════════════════════════════════ */
+
+/* Base mobile reset */
+html, body {
+  height: 100% !important;
+  height: 100dvh !important;
+  overflow: hidden !important;
+  overscroll-behavior: none !important;
+}
+
+#app {
+  height: 100dvh !important;
+  max-height: 100dvh !important;
+  overflow: hidden !important;
+}
+
+#chat-panel {
+  height: 100dvh !important;
+  max-height: 100dvh !important;
+  display: flex !important;
+  flex-direction: column !important;
+  overflow: hidden !important;
+  min-width: 0 !important;
+}
+
+#msgs-area {
+  flex: 1 1 0 !important;
+  overflow-y: auto !important;
+  overflow-x: hidden !important;
+  -webkit-overflow-scrolling: touch !important;
+  overscroll-behavior: contain !important;
+  padding: 12px !important;
+}
+
+/* Input bar — fixed at bottom */
+#input-bar {
+  flex-shrink: 0 !important;
+  position: relative !important;
+  z-index: 10 !important;
+  padding: 8px 10px !important;
+  padding-bottom: max(8px, env(safe-area-inset-bottom)) !important;
+  background: var(--bg1) !important;
+  border-top: 1px solid var(--bd) !important;
+}
+
+/* Chat header fixed */
+.chat-hdr {
+  flex-shrink: 0 !important;
+  position: relative !important;
+  z-index: 10 !important;
+}
+
+@media (max-width: 700px) {
+  /* Sidebar fullscreen on mobile */
+  #sidebar {
+    position: fixed !important;
+    left: 0; top: 0; bottom: 0 !important;
+    z-index: 200 !important;
+    transform: translateX(-100%) !important;
+    transition: transform .28s cubic-bezier(.22,1,.36,1) !important;
+    width: 100vw !important;
+    min-width: 0 !important;
+    height: 100dvh !important;
+  }
+  #sidebar.open { transform: translateX(0) !important; }
+
+  /* Chat panel full width */
+  #chat-panel { width: 100% !important; }
+
+  /* Bubbles not too wide */
+  .bubble { max-width: 78vw !important; }
+
+  /* Font sizes */
+  .chat-hdr-name { font-size: 14px !important; }
+  .ci-name { font-size: 13px !important; }
+  .ci-last { font-size: 11px !important; }
+
+  /* Tabs */
+  .tab { font-size: 10px !important; padding: 9px 4px !important; }
+
+  /* Input */
+  .msg-input, .msg-inp {
+    font-size: 16px !important; /* prevents iOS zoom */
+    padding: 9px 12px !important;
+  }
+
+  /* Modal full width on mobile */
+  .modal {
+    width: 95vw !important;
+    max-width: 95vw !important;
+    margin: 0 auto !important;
+    border-radius: 16px !important;
+  }
+
+  /* Game modal */
+  .game-modal {
+    width: 95vw !important;
+    padding: 16px !important;
+  }
+
+  /* Buttons in modals */
+  .modal button { min-height: 44px !important; }
+
+  /* Header icons */
+  .ib { width: 36px !important; height: 36px !important; }
+
+  /* Safe area */
+  #root { padding-bottom: env(safe-area-inset-bottom) !important; }
+}
+
+/* Game invite card in messages */
+.game-invite-card {
+  background: linear-gradient(135deg, var(--bg2), var(--bg3));
+  border: 1px solid var(--bd2);
+  border-radius: 14px;
+  padding: 12px 14px;
+  min-width: 200px;
+  max-width: 260px;
+}
+.game-invite-title {
+  font-size: 14px;
+  font-weight: 900;
+  margin-bottom: 4px;
+  color: var(--t1);
+}
+.game-invite-sub {
+  font-size: 10px;
+  color: var(--t3);
+  margin-bottom: 10px;
+  font-family: 'JetBrains Mono', monospace;
+}
+.game-invite-btns {
+  display: flex;
+  gap: 6px;
+}
+.game-accept-btn {
+  flex: 1;
+  padding: 7px;
+  border-radius: 10px;
+  border: none;
+  background: linear-gradient(135deg, var(--ac), var(--ac2));
+  color: #fff;
+  font-size: 11px;
+  font-weight: 800;
+  cursor: pointer;
+  transition: all .2s;
+}
+.game-accept-btn:hover { transform: scale(1.03); box-shadow: 0 3px 10px rgba(56,189,248,.4); }
+.game-decline-btn {
+  flex: 1;
+  padding: 7px;
+  border-radius: 10px;
+  border: 1px solid var(--bd2);
+  background: var(--bg3);
+  color: var(--t3);
+  font-size: 11px;
+  font-weight: 800;
+  cursor: pointer;
+  transition: all .2s;
+}
+
+/* Online game board */
+.online-game-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,.85);
+  backdrop-filter: blur(8px);
+  z-index: 3000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+}
+.online-game-modal {
+  background: var(--bg1);
+  border: 1px solid var(--bd2);
+  border-radius: 20px;
+  padding: 20px;
+  width: min(380px, 95vw);
+  text-align: center;
+  box-shadow: 0 20px 60px rgba(0,0,0,.7);
+  animation: modalPop .28s cubic-bezier(.34,1.56,.64,1);
+}
+.ttt-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+  margin: 16px 0;
+}
+.ttt-cell {
+  aspect-ratio: 1;
+  border-radius: 12px;
+  font-size: 32px;
+  font-weight: 900;
+  border: 2px solid var(--bd2);
+  background: var(--bg2);
+  cursor: pointer;
+  transition: all .15s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.ttt-cell:hover:not(.filled) { background: var(--bg3); border-color: var(--ac); }
+.ttt-cell.filled { cursor: default; }
+.ttt-cell.X { border-color: rgba(239,68,68,.5); color: #f87171; }
+.ttt-cell.O { border-color: rgba(52,211,153,.5); color: #4ade80; }
+.ttt-cell.winner-cell { background: var(--acg); border-color: var(--ac); }
+
 </style>
 </head>
 <body>
@@ -997,7 +1208,9 @@ const S = {
   rxnPicker: null,      // msgId showing reaction picker
   pwaPrompt: null,      // deferred install event
   pwaDismissed: !!localStorage.getItem("fc_pwa_dismissed"),
-  // v9
+  // v9.4
+  activeGameId: null,
+  onlineGame: null,
   colorTheme: localStorage.getItem("fc_color_theme")||"frost",
   avatars: JSON.parse(localStorage.getItem("fc_avatars")||"{}"),
   notifGranted: Notification?.permission==="granted",
@@ -1088,7 +1301,7 @@ const T = {
     cancel:"Cancel",save:"Save",close:"Close",
     search:"Search messages...",
     allPeople:"All",onlineNow:"Online",
-    about:"About",version:"Version 9.3 — Premium",developer:"Developer",
+    about:"About",version:"Version 9.4 — Multiplayer",developer:"Developer",
     vipSection:"Special Badges",vipEnter:"Enter VIP code",vipActivate:"Activate",
     vipSuccess:"Badge activated! 🎉",vipError:"Invalid code",
     vipCurrent:"Your badge:",vipRemove:"Remove",
@@ -1136,7 +1349,7 @@ const T = {
     cancel:"Annuler",save:"Enregistrer",close:"Fermer",
     search:"Rechercher...",
     allPeople:"Tous",onlineNow:"En ligne",
-    about:"À propos",version:"Version 9.3 — Premium",developer:"Développeur",
+    about:"À propos",version:"Version 9.4 — Multiplayer",developer:"Développeur",
     vipSection:"Badges Spéciaux",vipEnter:"Entrez le code VIP",vipActivate:"Activer",
     vipSuccess:"Badge activé! 🎉",vipError:"Code invalide",
     vipCurrent:"Votre badge:",vipRemove:"Supprimer",
@@ -2109,6 +2322,7 @@ function render(){
   const imgV=renderImgViewer(); if(imgV)root.appendChild(imgV);
   const profS=renderProfileSheet(); if(profS)root.appendChild(profS);
   if(S.themePickerModal)root.appendChild(renderThemePickerModal());
+  if(S.activeGameId&&S.onlineGame){const og=renderOnlineGame();if(og)root.appendChild(og);}
 
   // Scroll to bottom
   setTimeout(()=>{const e=document.getElementById("msgs-end");if(e)e.scrollIntoView({behavior:"smooth"});},50);
@@ -2923,6 +3137,13 @@ function renderMessage(m,chat){
   const own=m.from===S.user.name;
   const isYouChat=chat.name===YOU_NAME;
   const wrap=h("div",{style:{display:"flex",flexDirection:"column",alignItems:own?"flex-end":"flex-start",marginBottom:"4px",animation:"popIn .2s ease",position:"relative"}});
+
+  // Game invite message
+  if(m.type==="game_invite"){
+    const wrap2=h("div",{style:{display:"flex",flexDirection:"column",alignItems:own?"flex-end":"flex-start",marginBottom:"6px"}});
+    wrap2.appendChild(renderGameInviteCard(m,own));
+    return wrap2;
+  }
 
   // System message
   if(m.type==="system"){
@@ -3932,6 +4153,380 @@ function renderEmptyState(){
   wrap.appendChild(h("div",{className:"grad-txt",style:{fontSize:"28px",fontWeight:"900",letterSpacing:"-.5px"}},"FrostChat"));
   wrap.appendChild(h("div",{style:{fontSize:"12px",color:"var(--t3)",maxWidth:"200px",lineHeight:"1.7",textAlign:"center"}},"اختر محادثة للبدء"));
   return wrap;
+}
+
+
+/* ══════════════════════════════════════════════════════
+   ONLINE MULTIPLAYER GAMES v9.4
+══════════════════════════════════════════════════════ */
+
+const GAME_DB_PATH = "games"; // Firebase path for games
+
+/* ─── إرسال دعوة للعب ─── */
+async function sendGameInvite(gameType, chatId, opponent){
+  const gameId = uid();
+  const gameData = {
+    id: gameId,
+    type: gameType,
+    chatId: chatId,
+    host: S.user.name,
+    guest: opponent,
+    status: "pending", // pending | accepted | declined | playing | finished
+    board: gameType === "tictactoe" ? Array(9).fill(null) : null,
+    turn: S.user.name, // host goes first
+    winner: null,
+    moves: 0,
+    hostPick: null,
+    guestPick: null,
+    rpsResult: null,
+    ts: Date.now(),
+  };
+
+  // Save game to Firebase
+  const B = "https://frostchat-whithout-number-default-rtdb.firebaseio.com";
+  await fetch(B + "/" + GAME_DB_PATH + "/" + gameId + ".json", {
+    method: "PUT",
+    headers: {"Content-Type":"application/json"},
+    body: JSON.stringify(gameData)
+  });
+
+  // Send invite message in chat
+  const inviteMsg = {
+    id: uid(),
+    from: S.user.name,
+    text: "🎮 Game invite: " + (gameType === "tictactoe" ? "Tic Tac Toe ❌⭕" : "Rock Paper Scissors ✊"),
+    ts: Date.now(),
+    type: "game_invite",
+    gameId: gameId,
+    gameType: gameType,
+    replyTo: null,
+    starred: false,
+    reactions: {},
+    deleted: false,
+    edited: false,
+  };
+  await DB.sendMessage(chatId, inviteMsg);
+  showToast("🎮 دعوة اللعب أُرسلت!", "✅");
+}
+
+/* ─── قبول دعوة اللعب ─── */
+async function acceptGameInvite(gameId){
+  const B = "https://frostchat-whithout-number-default-rtdb.firebaseio.com";
+  await fetch(B + "/" + GAME_DB_PATH + "/" + gameId + "/status.json", {
+    method: "PUT", headers:{"Content-Type":"application/json"}, body: '"playing"'
+  });
+  S.activeGameId = gameId;
+  // Start listening to game
+  listenToGame(gameId);
+  render();
+  showToast("🎮 بدأت اللعبة!", "🎯");
+}
+
+/* ─── رفض دعوة اللعب ─── */
+async function declineGameInvite(gameId, chatId){
+  const B = "https://frostchat-whithout-number-default-rtdb.firebaseio.com";
+  await fetch(B + "/" + GAME_DB_PATH + "/" + gameId + "/status.json", {
+    method: "PUT", headers:{"Content-Type":"application/json"}, body: '"declined"'
+  });
+  const msg = {
+    id: uid(), from: S.user.name,
+    text: "❌ رفض دعوة اللعب",
+    ts: Date.now(), type: "text",
+    replyTo: null, starred: false, reactions:{}, deleted: false, edited: false,
+  };
+  await DB.sendMessage(chatId, msg);
+  showToast("رُفضت الدعوة", "");
+}
+
+/* ─── الاستماع لتحديثات اللعبة ─── */
+let _gameListeners = {};
+function listenToGame(gameId){
+  if(_gameListeners[gameId]) return;
+  const B = "https://frostchat-whithout-number-default-rtdb.firebaseio.com";
+  const poll = async () => {
+    try{
+      const res = await fetch(B + "/" + GAME_DB_PATH + "/" + gameId + ".json");
+      if(!res.ok) return;
+      const game = await res.json();
+      if(!game) return;
+      const prev = S.onlineGame;
+      S.onlineGame = game;
+      // Check if game just ended
+      if(game.status === "finished" && prev && prev.status === "playing"){
+        if(game.winner === S.user.name) showToast("🏆 فزت!", "🎉");
+        else if(game.winner === "draw") showToast("🤝 تعادل!", "");
+        else showToast("😔 خسرت", "");
+      }
+      if(game.status === "declined"){
+        showToast("❌ رُفضت دعوة اللعب", "");
+        S.activeGameId = null;
+        S.onlineGame = null;
+        clearInterval(_gameListeners[gameId]);
+        delete _gameListeners[gameId];
+      }
+      render();
+    }catch(e){}
+  };
+  poll();
+  _gameListeners[gameId] = setInterval(poll, 1500);
+}
+
+/* ─── حركة Tic Tac Toe أونلاين ─── */
+async function onlineTTTMove(gameId, index){
+  const game = S.onlineGame;
+  if(!game || game.status !== "playing") return;
+  if(game.turn !== S.user.name) return; // مش دورك
+  if(game.board[index]) return; // الخلية ممتلئة
+
+  const symbol = game.host === S.user.name ? "X" : "O";
+  const newBoard = [...game.board];
+  newBoard[index] = symbol;
+
+  // تحقق من الفائز
+  const wins = [[0,1,2],[3,4,5],[6,7,8],[0,3,6],[1,4,7],[2,5,8],[0,4,8],[2,4,6]];
+  let winner = null;
+  for(const [a,b,c] of wins){
+    if(newBoard[a] && newBoard[a]===newBoard[b] && newBoard[a]===newBoard[c]){
+      winner = game.turn; break;
+    }
+  }
+  const moves = game.moves + 1;
+  const isDraw = !winner && moves === 9;
+  const nextTurn = game.turn === game.host ? game.guest : game.host;
+  const status = (winner || isDraw) ? "finished" : "playing";
+
+  const B = "https://frostchat-whithout-number-default-rtdb.firebaseio.com";
+  const update = {
+    board: newBoard,
+    turn: nextTurn,
+    winner: winner || (isDraw ? "draw" : null),
+    moves: moves,
+    status: status,
+  };
+  await fetch(B + "/" + GAME_DB_PATH + "/" + gameId + ".json", {
+    method: "PATCH",
+    headers: {"Content-Type":"application/json"},
+    body: JSON.stringify(update)
+  });
+
+  if(status === "finished"){
+    const resultText = winner ? "🏆 " + winner + " wins Tic Tac Toe!" : "🤝 Tic Tac Toe: Draw!";
+    const msg = {id:uid(),from:S.user.name,text:"🎮 "+resultText,ts:Date.now(),type:"text",replyTo:null,starred:false,reactions:{},deleted:false,edited:false};
+    await DB.sendMessage(game.chatId, msg);
+  }
+}
+
+/* ─── حركة RPS أونلاين ─── */
+async function onlineRPSMove(gameId, pick){
+  const game = S.onlineGame;
+  if(!game || game.status !== "playing") return;
+  const isHost = game.host === S.user.name;
+  const field = isHost ? "hostPick" : "guestPick";
+
+  const B = "https://frostchat-whithout-number-default-rtdb.firebaseio.com";
+  await fetch(B + "/" + GAME_DB_PATH + "/" + gameId + "/" + field + ".json", {
+    method: "PUT", headers:{"Content-Type":"application/json"},
+    body: JSON.stringify(pick)
+  });
+
+  // تحقق من اكتمال الجولة
+  const newGame = {...game, [field]: pick};
+  if(newGame.hostPick && newGame.guestPick){
+    const beats = {"✊":"✌️", "✌️":"🖐️", "🖐️":"✊"};
+    let winner = null, result = "";
+    if(newGame.hostPick === newGame.guestPick){
+      winner = "draw"; result = "🤝 تعادل!";
+    } else if(beats[newGame.hostPick] === newGame.guestPick){
+      winner = newGame.host; result = "🏆 " + newGame.host + " wins RPS!";
+    } else {
+      winner = newGame.guest; result = "🏆 " + newGame.guest + " wins RPS!";
+    }
+    await fetch(B + "/" + GAME_DB_PATH + "/" + gameId + ".json", {
+      method: "PATCH",
+      headers: {"Content-Type":"application/json"},
+      body: JSON.stringify({status:"finished", winner, rpsResult: result})
+    });
+    const msg = {id:uid(),from:S.user.name,text:"🎮 "+result,ts:Date.now(),type:"text",replyTo:null,starred:false,reactions:{},deleted:false,edited:false};
+    await DB.sendMessage(game.chatId, msg);
+  } else {
+    showToast("انتظر خصمك...", "⏳");
+  }
+}
+
+/* ─── إغلاق اللعبة ─── */
+async function closeOnlineGame(){
+  if(S.activeGameId){
+    const B = "https://frostchat-whithout-number-default-rtdb.firebaseio.com";
+    if(S.onlineGame && S.onlineGame.status === "playing"){
+      await fetch(B + "/" + GAME_DB_PATH + "/" + S.activeGameId + "/status.json", {
+        method:"PUT", headers:{"Content-Type":"application/json"}, body:'"finished"'
+      });
+    }
+    if(_gameListeners[S.activeGameId]){
+      clearInterval(_gameListeners[S.activeGameId]);
+      delete _gameListeners[S.activeGameId];
+    }
+  }
+  S.activeGameId = null;
+  S.onlineGame = null;
+  render();
+}
+
+/* ─── رسم نافذة اللعبة الأونلاين ─── */
+function renderOnlineGame(){
+  const game = S.onlineGame;
+  if(!game || !S.activeGameId) return null;
+
+  const ov = h("div", {className:"online-game-overlay", onClick: e=>{if(e.target===ov)closeOnlineGame();}});
+  const modal = h("div", {className:"online-game-modal", onClick:e=>e.stopPropagation()});
+
+  const isHost = game.host === S.user.name;
+  const mySymbol = isHost ? "X" : "O";
+  const isMyTurn = game.turn === S.user.name;
+
+  // Header
+  const hdr = h("div", {style:{marginBottom:"12px"}});
+  if(game.type === "tictactoe"){
+    hdr.appendChild(h("div",{style:{fontSize:"18px",fontWeight:"900"}},"❌ Tic Tac Toe ⭕"));
+    const subTxt = game.status==="finished"
+      ? (game.winner==="draw"?"🤝 تعادل!":game.winner===S.user.name?"🏆 فزت!":"😔 خسرت")
+      : (isMyTurn ? "🟢 دورك! أنت: "+mySymbol : "⏳ دور "+game.turn);
+    hdr.appendChild(h("div",{style:{fontSize:"12px",color:isMyTurn?"var(--ac)":"var(--t3)",marginTop:"4px",fontWeight:"700"}},subTxt));
+  } else {
+    hdr.appendChild(h("div",{style:{fontSize:"18px",fontWeight:"900"}},"✊ Rock Paper Scissors"));
+    const myPick = isHost ? game.hostPick : game.guestPick;
+    const subTxt = game.status==="finished"
+      ? (game.rpsResult||"انتهت اللعبة")
+      : myPick ? "⏳ انتظار خصمك..." : "🟢 اختر!";
+    hdr.appendChild(h("div",{style:{fontSize:"12px",color:"var(--t3)",marginTop:"4px",fontWeight:"700"}},subTxt));
+  }
+
+  // Opponents
+  const players = h("div",{style:{display:"flex",justifyContent:"center",gap:"20px",marginBottom:"14px",alignItems:"center"}});
+  const p1=h("div",{style:{textAlign:"center"}});
+  p1.appendChild(h("div",{style:{fontSize:"24px"}},"👤"));
+  p1.appendChild(h("div",{style:{fontSize:"10px",fontWeight:"800",color:"var(--ac)"}},(game.host===S.user.name?"أنت":game.host)));
+  p1.appendChild(h("div",{style:{fontSize:"9px",color:"var(--t3)"}},"X"));
+  players.appendChild(p1);
+  players.appendChild(h("div",{style:{fontSize:"16px",color:"var(--t3)"}},"VS"));
+  const p2=h("div",{style:{textAlign:"center"}});
+  p2.appendChild(h("div",{style:{fontSize:"24px"}},"👤"));
+  p2.appendChild(h("div",{style:{fontSize:"10px",fontWeight:"800",color:"#4ade80"}},(game.guest===S.user.name?"أنت":game.guest)));
+  p2.appendChild(h("div",{style:{fontSize:"9px",color:"var(--t3)"}},"O"));
+  players.appendChild(p2);
+  modal.appendChild(hdr);
+  modal.appendChild(players);
+
+  // Game content
+  if(game.type === "tictactoe"){
+    const grid = h("div",{className:"ttt-grid"});
+    (game.board||Array(9).fill(null)).forEach((cell,i)=>{
+      const wins = [[0,1,2],[3,4,5],[6,7,8],[0,3,6],[1,4,7],[2,5,8],[0,4,8],[2,4,6]];
+      let isWinCell = false;
+      if(game.winner && game.winner!=="draw"){
+        for(const [a,b,c] of wins){
+          if(game.board[a]&&game.board[a]===game.board[b]&&game.board[a]===game.board[c]&&(i===a||i===b||i===c)){
+            isWinCell=true;break;
+          }
+        }
+      }
+      const btn = h("button",{
+        className:"ttt-cell"+(cell?" filled "+cell:"")+(isWinCell?" winner-cell":""),
+        onClick:()=>{ if(game.status==="playing")onlineTTTMove(S.activeGameId,i); }
+      }, cell||"");
+      grid.appendChild(btn);
+    });
+    modal.appendChild(grid);
+
+  } else if(game.type === "rps"){
+    const myPick = isHost ? game.hostPick : game.guestPick;
+    const oppPick = isHost ? game.guestPick : game.hostPick;
+
+    // Show picks if game finished
+    if(game.status === "finished" && myPick && oppPick){
+      const picks = h("div",{style:{display:"flex",justifyContent:"center",gap:"24px",margin:"16px 0",fontSize:"48px"}});
+      picks.appendChild(h("div",{style:{textAlign:"center"}},
+        h("div",{},myPick), h("div",{style:{fontSize:"9px",color:"var(--t3)",marginTop:"4px"}},"أنت")));
+      picks.appendChild(h("div",{style:{fontSize:"20px",alignSelf:"center",color:"var(--t3)"}},"VS"));
+      picks.appendChild(h("div",{style:{textAlign:"center"}},
+        h("div",{},oppPick), h("div",{style:{fontSize:"9px",color:"var(--t3)",marginTop:"4px"}},"خصمك")));
+      modal.appendChild(picks);
+    } else if(!myPick){
+      // Choose
+      const choices = h("div",{style:{display:"flex",justifyContent:"center",gap:"12px",margin:"16px 0"}});
+      ["✊","✌️","🖐️"].forEach(em=>{
+        const btn=h("button",{style:{
+          fontSize:"40px",padding:"16px",borderRadius:"16px",border:"2px solid var(--bd2)",
+          background:"var(--bg2)",cursor:"pointer",transition:"all .2s"
+        },onClick:()=>onlineRPSMove(S.activeGameId,em)},em);
+        choices.appendChild(btn);
+      });
+      modal.appendChild(choices);
+    } else {
+      // Waiting
+      modal.appendChild(h("div",{style:{padding:"20px",fontSize:"32px",textAlign:"center"}},myPick));
+      modal.appendChild(h("div",{style:{textAlign:"center",color:"var(--t3)",fontSize:"12px"}},"اخترت! انتظر خصمك..."));
+    }
+  }
+
+  // Buttons
+  const btns = h("div",{style:{display:"flex",gap:"8px",marginTop:"14px"}});
+  if(game.status === "finished"){
+    if(game.type==="tictactoe"){
+      const replayBtn=h("button",{style:{flex:"1",padding:"10px",borderRadius:"12px",background:"linear-gradient(135deg,var(--ac),var(--ac2))",border:"none",color:"#fff",cursor:"pointer",fontSize:"11px",fontWeight:"800"},
+        onClick:async()=>{
+          const newGame={...game,board:Array(9).fill(null),turn:game.host,winner:null,moves:0,status:"playing",ts:Date.now()};
+          const B="https://frostchat-whithout-number-default-rtdb.firebaseio.com";
+          await fetch(B+"/"+GAME_DB_PATH+"/"+S.activeGameId+".json",{method:"PUT",headers:{"Content-Type":"application/json"},body:JSON.stringify(newGame)});
+        }},"🔄 لعبة جديدة");
+      btns.appendChild(replayBtn);
+    }
+  }
+  const closeBtn=h("button",{style:{flex:"1",padding:"10px",borderRadius:"12px",background:"var(--bg3)",border:"1px solid var(--bd2)",color:"var(--t3)",cursor:"pointer",fontSize:"11px",fontWeight:"800"},
+    onClick:closeOnlineGame},"✕ إغلاق");
+  btns.appendChild(closeBtn);
+  modal.appendChild(btns);
+
+  ov.appendChild(modal);
+  return ov;
+}
+
+/* ─── رسم بطاقة دعوة اللعب في المحادثة ─── */
+function renderGameInviteCard(m, own){
+  const card = h("div",{className:"game-invite-card"});
+  const gameNames = {tictactoe:"Tic Tac Toe ❌⭕", rps:"Rock Paper Scissors ✊"};
+  card.appendChild(h("div",{className:"game-invite-title"},"🎮 دعوة للعب"));
+  card.appendChild(h("div",{className:"game-invite-sub"},gameNames[m.gameType]||m.text));
+  card.appendChild(h("div",{style:{fontSize:"10px",color:"var(--t3)",marginBottom:"8px"}},
+    "من: "+m.from+" · "+timeFmt(m.ts)));
+
+  if(!own && m.gameId){
+    // Check game status
+    const gameStatus = S.onlineGame?.id===m.gameId ? S.onlineGame?.status : null;
+    const btns = h("div",{className:"game-invite-btns"});
+
+    if(gameStatus==="playing"||gameStatus==="finished"){
+      btns.appendChild(h("button",{className:"game-accept-btn",onClick:()=>{S.activeGameId=m.gameId;listenToGame(m.gameId);render();}},"🎮 فتح اللعبة"));
+    } else if(gameStatus==="declined"){
+      btns.appendChild(h("span",{style:{fontSize:"11px",color:"#f87171",fontWeight:"700"}},"❌ مرفوضة"));
+    } else {
+      const acceptBtn=h("button",{className:"game-accept-btn",onClick:()=>acceptGameInvite(m.gameId)},"✅ قبول");
+      const declineBtn=h("button",{className:"game-decline-btn",onClick:()=>declineGameInvite(m.gameId,m.chatId||S.activeChat?.id)},"❌ رفض");
+      btns.appendChild(acceptBtn);
+      btns.appendChild(declineBtn);
+    }
+    card.appendChild(btns);
+  } else if(own){
+    // Own invite — show status
+    const gameStatus = S.onlineGame?.id===m.gameId ? S.onlineGame?.status : "pending";
+    const statusMap = {pending:"⏳ بانتظار الرد...", playing:"🟢 جارية", finished:"✅ انتهت", declined:"❌ مرفوضة"};
+    card.appendChild(h("div",{style:{fontSize:"10px",color:"var(--t3)",fontWeight:"700"}},statusMap[gameStatus]||"⏳ بانتظار الرد..."));
+    if(gameStatus==="playing"){
+      card.appendChild(h("button",{className:"game-accept-btn",style:{marginTop:"8px",width:"100%"},
+        onClick:()=>{S.activeGameId=m.gameId;listenToGame(m.gameId);render();}},"🎮 فتح اللعبة"));
+    }
+  }
+  return card;
 }
 
 /* ══════════════════════════════════════════════════════
