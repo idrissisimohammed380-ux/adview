@@ -730,6 +730,41 @@ body::before {
   .tab { padding: 6px 2px; }
   .ib { width: 34px; height: 34px; }
 }
+
+/* ── MOBILE CHAT PANEL FIX ── */
+@media (max-width: 700px) {
+  #chat-panel {
+    position: fixed !important;
+    inset: 0 !important;
+    width: 100vw !important;
+    height: 100dvh !important;
+    z-index: 100 !important;
+    display: flex !important;
+    flex-direction: column !important;
+    overflow: hidden !important;
+  }
+  #msgs-area {
+    flex: 1 1 0 !important;
+    min-height: 0 !important;
+    overflow-y: auto !important;
+    -webkit-overflow-scrolling: touch !important;
+    padding: 10px 10px !important;
+  }
+  #input-bar {
+    flex-shrink: 0 !important;
+    width: 100% !important;
+    padding-bottom: max(10px, env(safe-area-inset-bottom)) !important;
+  }
+  .chat-hdr {
+    flex-shrink: 0 !important;
+    width: 100% !important;
+  }
+  .bubble {
+    max-width: 80vw !important;
+    font-size: 13px !important;
+  }
+}
+
 </style>
 </head>
 
@@ -896,16 +931,16 @@ const UNSUB = {};
 
 // VIP tiers — للمستخدمين العاديين
 const VIP_TIERS = {
-  "VIP":      {label:"⭐ VIP",    cls:"vip-gold",  color:"#fbbf24"},
-  "VIP+":     {label:"💎 VIP+",   cls:"vip-blue",  color:"#60a5fa"},
-  "VIP++":    {label:"💜 VIP++",  cls:"vip-pink",  color:"#f472b6"},
-  "PRO":      {label:"🔥 PRO",    cls:"vip-red",   color:"#f87171"},
-  "CREATOR":  {label:"✨ CREATOR",cls:"vip-green", color:"#34d399"},
+  "VIP":      {label:"✦ VIP",      cls:"vip-gold",  color:"#fbbf24"},
+  "VIP+":     {label:"◈ VIP⁺",    cls:"vip-blue",  color:"#60a5fa"},
+  "VIP++":    {label:"❋ VIP⁺⁺",  cls:"vip-pink",  color:"#f472b6"},
+  "PRO":      {label:"⚡ PRO",    cls:"vip-red",   color:"#f87171"},
+  "CREATOR":  {label:"⬡ CREATOR",cls:"vip-green", color:"#34d399"},
 };
 
 // Legacy support for old VIP_CODES format (DEVELOPER code still works)
 const VIP_CODES = {
-  "DEVELOPER": {badge:"",label:"DEV", color:"#3b82f6", glow:false},
+  "DEVELOPER": {badge:"",label:"⟨/⟩ DEV", color:"#3b82f6", glow:false},
 };
 
 function getVipTier(vipCode){
@@ -932,7 +967,7 @@ function vipBadge(code, sz){
 
   // Legacy DEV badge
   if(upper==="DEVELOPER"){
-    const b=h("span",{className:"vip-badge",style:{background:"rgba(59,130,246,.15)",color:"#60a5fa",border:"1px solid rgba(59,130,246,.3)",fontSize:size+"px",fontWeight:"900",padding:"1px 6px",borderRadius:"5px",fontFamily:"JetBrains Mono,monospace"}},"⚡ DEV");
+    const b=h("span",{className:"vip-badge",style:{background:"rgba(59,130,246,.15)",color:"#60a5fa",border:"1px solid rgba(59,130,246,.3)",fontSize:size+"px",fontWeight:"900",padding:"1px 6px",borderRadius:"5px",fontFamily:"JetBrains Mono,monospace"}},"⟨/⟩ DEV");
     return b;
   }
   return null;
@@ -956,7 +991,7 @@ const T = {
   en:{
     appName:"FrostChat",tagline:"Real-time messaging",
     yourName:"Your name",start:"Start Chatting",login:"Login",register:"Register",username:"Username",password:"Password",confirmPassword:"Confirm password",createAccount:"Create Account",search:"Search...",changePass:"Change Password",deleteAcc:"Delete Account",newGroup:"New Group",groupName:"Group name",members:"Members",
-    chats:"Chats",people:"People",settings:"Settings",
+    chats:"Users",people:"Chats",settings:"Settings",
     send:"Send",typePH:"Message...",
     online:"online",offline:"offline",members:"members",
     newGroup:"New Group",groupName:"Group name",create:"Create",
@@ -967,7 +1002,7 @@ const T = {
     cancel:"Cancel",save:"Save",close:"Close",
     search:"Search messages...",
     allPeople:"All",onlineNow:"Online",
-    about:"About",version:"Version 9.4 — Multiplayer",developer:"Developer",
+    about:"About",version:"Version 9.5",developer:"Developer",
     vipSection:"Special Badges",vipEnter:"Enter VIP code",vipActivate:"Activate",
     vipSuccess:"Badge activated! 🎉",vipError:"Invalid code",
     vipCurrent:"Your badge:",vipRemove:"Remove",
@@ -1015,7 +1050,7 @@ const T = {
     cancel:"Annuler",save:"Enregistrer",close:"Fermer",
     search:"Rechercher...",
     allPeople:"Tous",onlineNow:"En ligne",
-    about:"À propos",version:"Version 9.4 — Multiplayer",developer:"Développeur",
+    about:"À propos",version:"Version 9.5",developer:"Développeur",
     vipSection:"Badges Spéciaux",vipEnter:"Entrez le code VIP",vipActivate:"Activer",
     vipSuccess:"Badge activé! 🎉",vipError:"Code invalide",
     vipCurrent:"Votre badge:",vipRemove:"Supprimer",
@@ -1845,10 +1880,39 @@ function renderAdminPanel(){
 
 
 
+
+/* ─── إصلاح حالة الاتصال ─── */
+function startPresenceHeartbeat(name){
+  const B="https://frostchat-whithout-number-default-rtdb.firebaseio.com";
+  const key=name.replace(/[.#$[\]]/g,"_");
+  
+  async function setOnline(){
+    try{
+      await fetch(B+"/users/"+key+"/online.json",{method:"PUT",headers:{"Content-Type":"application/json"},body:"true"});
+      await fetch(B+"/users/"+key+"/lastSeen.json",{method:"PUT",headers:{"Content-Type":"application/json"},body:Date.now().toString()});
+    }catch(e){}
+  }
+  
+  async function setOffline(){
+    try{
+      await fetch(B+"/users/"+key+"/online.json",{method:"PUT",headers:{"Content-Type":"application/json"},body:"false"});
+      await fetch(B+"/users/"+key+"/lastSeen.json",{method:"PUT",headers:{"Content-Type":"application/json"},body:Date.now().toString()});
+    }catch(e){}
+  }
+
+  setOnline();
+  window._heartbeat=setInterval(setOnline, 25000);
+  window.addEventListener("beforeunload", ()=>{ setOffline(); clearInterval(window._heartbeat); });
+  document.addEventListener("visibilitychange", ()=>{
+    if(document.hidden) setOffline();
+    else setOnline();
+  });
+}
+
 /* ─── حذف تلقائي للحسابات الأخرى (يُنفَّذ مرة واحدة) ─── */
 async function autoCleanUsers(){
   const cleaned = localStorage.getItem("fc_users_cleaned");
-  if(cleaned) return;
+  if(cleaned === "2") return; // already cleaned v2
   if(!S.user || !isAdmin()) return;
   
   const B="https://frostchat-whithout-number-default-rtdb.firebaseio.com";
@@ -1867,7 +1931,7 @@ async function autoCleanUsers(){
     if(count > 0){
       showToast("🧹 تم حذف "+count+" حساب تلقائياً","✅");
     }
-    localStorage.setItem("fc_users_cleaned","1");
+    localStorage.setItem("fc_users_cleaned","2"); // bump version to re-run
   }catch(e){ console.log("autoClean error:",e); }
 }
 
@@ -2277,8 +2341,8 @@ function renderSidebar(){
   // Tabs
   const tabs=h("div",{className:"tabs"});
   [
-    {id:"chats",   icon:"💬", label:"chats"},
-    {id:"people",  icon:"👥", label:"people"},
+    {id:"chats",   icon:"👥", label:"chats"},
+    {id:"people",  icon:"💬", label:"people"},
     {id:"settings",icon:"⚙️", label:"settings"},
   ].forEach(({id,icon,label})=>{
     const active=S.tab===id;
@@ -2343,109 +2407,146 @@ function renderSidebar(){
 
 /* -- Chat List -- */
 function renderChatList(){
+  // ALL USERS LIST
   const t=T[S.lang];
   const wrap=h("div",{});
 
   // Search
   const srch=h("div",{style:{padding:"8px 10px",borderBottom:"1px solid var(--bd)"}});
   const si=document.createElement("input");
-  si.className="inp";si.placeholder="🔍 Search...";si.value=S.q||"";
+  si.className="inp";si.placeholder="🔍 بحث...";si.value=S.q||"";
   si.style.cssText="margin:0;padding:7px 12px;font-size:11px;";
   si.addEventListener("input",e=>{S.q=e.target.value;clearTimeout(window._sq);window._sq=setTimeout(render,250);});
   srch.appendChild(si);wrap.appendChild(srch);
 
-  let chats=[...S.chats].sort((a,b)=>{
-    const ap=S.pinned.includes(a.id),bp=S.pinned.includes(b.id);
-    if(ap&&!bp)return-1;if(!ap&&bp)return 1;
-    return(b.ts||0)-(a.ts||0);
-  });
-  if(S.q)chats=chats.filter(c=>c.name?.toLowerCase().includes(S.q.toLowerCase()));
-
-  if(!chats.length){
-    const em=h("div",{style:{padding:"30px",textAlign:"center",color:"var(--t3)"}});
-    em.appendChild(ico("group",28,"var(--t3)"));
-    em.appendChild(h("div",{style:{fontSize:"11px",marginTop:"8px"}},"No chats yet"));
-    em.appendChild(h("div",{style:{fontSize:"10px",marginTop:"4px",color:"var(--t3)"}},"Go to People tab to start chatting"));
-    wrap.appendChild(em);
-    return wrap;
-  }
-
-  chats.forEach(c=>{
-    const active=S.activeChat?.id===c.id;
-    const last=c.lastMsg;
-    const row=h("div",{className:"chat-item"+(active?" active":"")+(S.pinned.includes(c.id)?" pinned":"")+(S.muted.includes(c.id)?" muted":""),onClick:()=>setActiveChat(c)});
-    if(S.pinned.includes(c.id))row.style.borderLeft="3px solid var(--ac)";
-    const avWrap=h("div",{style:{position:"relative"}});
-    const cu=S.users[c.name];
-    avWrap.appendChild(renderCustomAv(c.name,42,{online:c.type==="dm"?cu?.online:false}));
-    if(S.muted.includes(c.id)){const ms=h("div",{style:{position:"absolute",bottom:"-2px",right:"-2px",background:"var(--bg2)",borderRadius:"50%",width:"14px",height:"14px",display:"flex",alignItems:"center",justifyContent:"center"}});ms.appendChild(ico("mute",8,"var(--t3)"));avWrap.appendChild(ms);}
-    row.appendChild(avWrap);
-
-    const info=h("div",{style:{flex:"1",minWidth:"0"}});
-    const nr=h("div",{style:{display:"flex",alignItems:"center",gap:"4px",marginBottom:"2px"}});
-    nr.appendChild(h("span",{style:{fontSize:"12px",fontWeight:"800",color:"var(--t1)",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",flex:"1"}},c.name));
-    if(c.type==="dm"){const isOwnerU2=isOwnerAccount(c.name);const cv=isOwnerU2?ownerBadge(7):vipBadge(cu?.vipCode,7);if(cv)nr.appendChild(cv);}
-    if(S.pinned.includes(c.id))nr.appendChild(ico("pin",9,"var(--ac)"));
-    if(c.name===YOU_NAME){const yb=h("span",{style:{background:"rgba(59,130,246,.15)",color:"#60a5fa",border:"1px solid rgba(59,130,246,.3)",borderRadius:"5px",padding:"0 4px",fontSize:"8px",fontWeight:"800",fontFamily:"JetBrains Mono,monospace"}},"NOTES");nr.appendChild(yb);}
-    info.appendChild(nr);
-
-    const lr=h("div",{style:{fontSize:"10px",color:"var(--t3)",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}},last||(t.hello));
-    info.appendChild(lr);row.appendChild(info);
-
-    const meta=h("div",{style:{display:"flex",flexDirection:"column",alignItems:"flex-end",gap:"4px",flexShrink:"0"}});
-    if(c.ts)meta.appendChild(h("span",{style:{fontSize:"9px",color:"var(--t3)",fontFamily:"JetBrains Mono,monospace"}},timeFmt(c.ts)));
-    const ub=S.unread[c.id]||0;
-    if(ub>0)meta.appendChild(h("span",{className:"unread-badge"},ub>99?"99+":ub));
-    row.appendChild(meta);
-    wrap.appendChild(row);
-  });
-  return wrap;
-}
-
-/* -- People List -- */
-function renderPeopleList(){
-  const t=T[S.lang];
-  const wrap=h("div",{});
-
-  // Filter
-  const fbar=h("div",{style:{display:"flex",gap:"4px",padding:"8px 10px",borderBottom:"1px solid var(--bd)"}});
+  // Filter: all / online
+  const fbar=h("div",{style:{display:"flex",gap:"4px",padding:"6px 10px",borderBottom:"1px solid var(--bd)"}});
   ["all","online"].forEach(f=>{
-    const active=S.uFilter===f;
-    const lb=f==="all"?t.allPeople:t.onlineNow;
-    const btn=h("button",{style:{flex:"1",padding:"6px",borderRadius:"8px",border:"1px solid "+(active?"var(--ac)":"var(--bd2)"),background:active?"var(--acd)":"transparent",color:active?"var(--ac)":"var(--t3)",cursor:"pointer",fontSize:"10px",fontWeight:"800"},onClick:()=>{S.uFilter=f;render();}},lb);
+    const active=(S.uFilter||"all")===f;
+    const lb=f==="all"?"🌍 الكل":"🟢 متصل";
+    const btn=h("button",{style:{flex:"1",padding:"5px",borderRadius:"8px",border:"1px solid "+(active?"var(--ac)":"var(--bd2)"),background:active?"var(--acg)":"transparent",color:active?"var(--ac)":"var(--t3)",cursor:"pointer",fontSize:"10px",fontWeight:"800"},onClick:()=>{S.uFilter=f;render();}},lb);
     fbar.appendChild(btn);
   });
   wrap.appendChild(fbar);
 
   const allU=Object.values(S.users||{}).filter(u=>
     u&&u.name&&u.name!==S.user?.name&&u.name!==YOU_NAME&&
-    (S.uFilter==="online"?u.online:true)&&
+    ((S.uFilter||"all")==="online"?u.online:true)&&
     (u.name||"").toLowerCase().includes((S.q||"").toLowerCase())
-  );
+  ).sort((a,b)=>(b.online?1:0)-(a.online?1:0));
 
   if(!allU.length){
-    const em=h("div",{style:{padding:"30px",textAlign:"center",color:"var(--t3)"}});
-    em.appendChild(ico("group",28,"var(--t3)"));
-    em.appendChild(h("div",{style:{fontSize:"11px",marginTop:"8px"}},"No users found"));
-    em.appendChild(h("div",{style:{fontSize:"10px",marginTop:"4px"}},"Share the app link to invite friends!"));
+    const em=h("div",{style:{padding:"40px",textAlign:"center",color:"var(--t3)"}});
+    em.appendChild(h("div",{style:{fontSize:"32px",marginBottom:"10px"}},"👥"));
+    em.appendChild(h("div",{style:{fontSize:"12px",fontWeight:"700",color:"var(--t2)"}},"لا يوجد مستخدمون"));
     wrap.appendChild(em);
     return wrap;
   }
 
-  allU.sort((a,b)=>(b.online?1:0)-(a.online?1:0)).forEach(u=>{
-    const row=h("div",{className:"people-item",onClick:()=>startDM(u.name)});
-    row.appendChild(renderCustomAv(u.name,40,{online:u.online}));
+  allU.forEach(u=>{
+    const row=h("div",{className:"people-item",style:{cursor:"pointer"},onClick:()=>startDM(u.name)});
+    // Avatar with online indicator
+    const avWrap=h("div",{style:{position:"relative",flexShrink:"0"}});
+    avWrap.appendChild(renderCustomAv(u.name,42,{online:u.online}));
+    row.appendChild(avWrap);
+
     const info=h("div",{style:{flex:"1",minWidth:"0"}});
-    const nr=h("div",{style:{display:"flex",alignItems:"center",gap:"5px",marginBottom:"2px"}});
-    nr.appendChild(h("span",{style:{fontSize:"12px",fontWeight:"800",color:"var(--t1)"}},u.name));
-    const isOwnerPpl=isOwnerAccount(u.name);const uv=isOwnerPpl?ownerBadge(8):vipBadge(u.vipCode,8);if(uv)nr.appendChild(uv);
+    const nr=h("div",{style:{display:"flex",alignItems:"center",gap:"5px",marginBottom:"3px"}});
+    nr.appendChild(h("span",{style:{fontSize:"13px",fontWeight:"800",color:"var(--t1)",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",flex:"1"}},u.name));
+    const isOwn=isOwnerAccount(u.name);
+    const badge=isOwn?ownerBadge(7):vipBadge(u.vipCode,7);
+    if(badge)nr.appendChild(badge);
     info.appendChild(nr);
-    const st=h("div",{style:{fontSize:"9px",color:u.online?"var(--ac)":"var(--t3)",display:"flex",alignItems:"center",gap:"3px"}});
-    if(u.online)st.appendChild(h("span",{className:"status-dot",style:{width:"5px",height:"5px"}}));
-    st.appendChild(document.createTextNode((u.online?t.online:t.offline)+(u.status?" · "+u.status:"")));
-    info.appendChild(st);row.appendChild(info);
-    const msgBtn=h("button",{style:{background:"var(--acg)",border:"1px solid rgba(34,197,94,.3)",borderRadius:"10px",padding:"6px 12px",cursor:"pointer",fontSize:"10px",fontWeight:"800",color:"var(--ac)"},onClick:e=>{e.stopPropagation();startDM(u.name);}},t.send.slice(0,1)+"💬");
+
+    const st=h("div",{style:{display:"flex",alignItems:"center",gap:"4px"}});
+    const dot=h("span",{style:{width:"6px",height:"6px",borderRadius:"50%",background:u.online?"#22c55e":"var(--t3)",display:"inline-block",flexShrink:"0"}});
+    st.appendChild(dot);
+    st.appendChild(h("span",{style:{fontSize:"10px",color:u.online?"#22c55e":"var(--t3)",fontWeight:"700"}},u.online?"متصل الآن":"غير متصل"));
+    if(u.status)st.appendChild(h("span",{style:{fontSize:"10px",color:"var(--t3)"}}," · "+u.status));
+    info.appendChild(st);
+    row.appendChild(info);
+
+    const msgBtn=h("button",{style:{background:"var(--acg)",border:"1px solid var(--bd2)",borderRadius:"10px",padding:"7px 12px",cursor:"pointer",fontSize:"11px",fontWeight:"800",color:"var(--ac)",flexShrink:"0"},
+      onClick:e=>{e.stopPropagation();startDM(u.name);}
+    },"💬");
     row.appendChild(msgBtn);
+    wrap.appendChild(row);
+  });
+  return wrap;
+}
+
+/* -- People List = محادثاتي السابقة -- */
+function renderPeopleList(){
+  const t=T[S.lang];
+  const wrap=h("div",{});
+
+  // Search
+  const srch=h("div",{style:{padding:"8px 10px",borderBottom:"1px solid var(--bd)"}});
+  const si=document.createElement("input");
+  si.className="inp";si.placeholder="🔍 بحث في المحادثات...";si.value=S.pq||"";
+  si.style.cssText="margin:0;padding:7px 12px;font-size:11px;";
+  si.addEventListener("input",e=>{S.pq=e.target.value;clearTimeout(window._pq);window._pq=setTimeout(render,250);});
+  srch.appendChild(si);wrap.appendChild(srch);
+
+  // فلترة المحادثات DM فقط (الأشخاص الذين راسلتهم)
+  let myChats=[...S.chats]
+    .filter(c=>c.type==="dm"&&c.name&&c.name!==YOU_NAME)
+    .filter(c=>!(S.pq)||c.name.toLowerCase().includes((S.pq||"").toLowerCase()))
+    .sort((a,b)=>{
+      const ap=S.pinned.includes(a.id),bp=S.pinned.includes(b.id);
+      if(ap&&!bp)return-1;if(!ap&&bp)return 1;
+      return(b.ts||0)-(a.ts||0);
+    });
+
+  if(!myChats.length){
+    const em=h("div",{style:{padding:"40px",textAlign:"center",color:"var(--t3)"}});
+    em.appendChild(h("div",{style:{fontSize:"32px",marginBottom:"10px"}},"💬"));
+    em.appendChild(h("div",{style:{fontSize:"12px",fontWeight:"700",color:"var(--t2)"}},"لا توجد محادثات بعد"));
+    em.appendChild(h("div",{style:{fontSize:"10px",marginTop:"6px"}},"ابدأ محادثة من تبويب المستخدمين"));
+    wrap.appendChild(em);
+    return wrap;
+  }
+
+  myChats.forEach(c=>{
+    const active=S.activeChat?.id===c.id;
+    const cu=S.users[c.name]||{};
+    const last=c.lastMsg||"";
+    const ub=S.unread[c.id]||0;
+
+    const row=h("div",{
+      className:"chat-item"+(active?" active":"")+(S.pinned.includes(c.id)?" pinned":"")+(S.muted.includes(c.id)?" muted":""),
+      style:{cursor:"pointer"},
+      onClick:()=>setActiveChat(c)
+    });
+    if(S.pinned.includes(c.id))row.style.borderLeft="3px solid var(--ac)";
+
+    // Avatar
+    const avWrap=h("div",{style:{position:"relative",flexShrink:"0"}});
+    avWrap.appendChild(renderCustomAv(c.name,42,{online:cu.online}));
+    row.appendChild(avWrap);
+
+    // Info
+    const info=h("div",{style:{flex:"1",minWidth:"0"}});
+    const nr=h("div",{style:{display:"flex",alignItems:"center",gap:"4px",marginBottom:"2px"}});
+    nr.appendChild(h("span",{style:{fontSize:"13px",fontWeight:"800",color:"var(--t1)",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",flex:"1"}},c.name));
+    const isOwn=isOwnerAccount(c.name);
+    const badge=isOwn?ownerBadge(7):vipBadge(cu.vipCode,7);
+    if(badge)nr.appendChild(badge);
+    if(S.pinned.includes(c.id))nr.appendChild(ico("pin",9,"var(--ac)"));
+    info.appendChild(nr);
+
+    const lastRow=h("div",{style:{display:"flex",alignItems:"center",gap:"4px"}});
+    const dot=h("span",{style:{width:"5px",height:"5px",borderRadius:"50%",background:cu.online?"#22c55e":"var(--t3)",display:"inline-block",flexShrink:"0"}});
+    lastRow.appendChild(dot);
+    lastRow.appendChild(h("span",{style:{fontSize:"10px",color:"var(--t3)",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}},last||(cu.online?"متصل الآن":"غير متصل")));
+    info.appendChild(lastRow);
+    row.appendChild(info);
+
+    // Meta
+    const meta=h("div",{style:{display:"flex",flexDirection:"column",alignItems:"flex-end",gap:"4px",flexShrink:"0"}});
+    if(c.ts)meta.appendChild(h("span",{style:{fontSize:"9px",color:"var(--t3)",fontFamily:"JetBrains Mono,monospace"}},timeFmt(c.ts)));
+    if(ub>0)meta.appendChild(h("span",{className:"unread-badge"},ub>99?"99+":ub));
+    row.appendChild(meta);
     wrap.appendChild(row);
   });
   return wrap;
@@ -4388,6 +4489,8 @@ function boot(){
   setTimeout(autoCleanUsers, 2000);
   if(!S.user)return;
   const name=S.user.name;
+  // Start presence heartbeat
+  startPresenceHeartbeat(name);
   DB.setUser(name,{...S.user,online:true,lastSeen:Date.now()});
   DB.setupPresence(name);
   UNSUB.users=DB.onUsers(u=>{
