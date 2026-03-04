@@ -115,8 +115,8 @@ body{font-family:'Plus Jakarta Sans','Noto Sans Arabic',sans-serif;background:va
 
 .toast{position:fixed;bottom:80px;left:50%;transform:translateX(-50%);background:var(--bg3);border:1px solid var(--bd2);border-radius:24px;padding:10px 20px;font-size:12px;font-weight:700;color:var(--t1);z-index:2000;white-space:nowrap;display:flex;align-items:center;gap:8px;box-shadow:var(--sh);animation:toastIn .3s ease;pointer-events:none}
 
-.stories-bar{display:flex;gap:12px;padding:9px 12px;overflow-x:auto;border-bottom:1px solid var(--bd);background:var(--bg1);flex-shrink:0;scrollbar-width:none}
-.story-av{padding:2.5px;border-radius:50%;background:linear-gradient(135deg,var(--ac),#60a5fa);cursor:pointer}
+.stories-bar{display:none!important;/*gap:12px;padding:9px 12px;overflow-x:auto;border-bottom:1px solid var(--bd);background:var(--bg1);flex-shrink:0;scrollbar-width:none}
+*/.story-av{display:none;/*border-radius:50%;background:linear-gradient(135deg,var(--ac),#60a5fa);cursor:pointer}
 .story-av.seen{background:var(--bg4)}
 .story-name{font-size:9px;color:var(--t2);font-weight:700;max-width:50px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-align:center}
 
@@ -1289,28 +1289,16 @@ async function loadAdminData(){
 async function adminDeleteUser(name){
   if(!confirm("حذف المستخدم: "+name+"?\nهذا الإجراء لا يمكن التراجع عنه!")) return;
   try{
-    if(!window.__fb||window.__fb.DEMO_MODE){
-      if(S.adminData&&S.adminData.users) delete S.adminData.users[name];
-      showToast("تم الحذف: "+name,"🗑️"); render(); return;
-    }
-    const {db,ref,set} = window.__fb;
-    // Delete user data
-    await set(ref(db,"users/"+name), null);
-    // Also remove from chats members
-    if(S.adminData&&S.adminData.chats){
-      for(const chat of Object.values(S.adminData.chats||{})){
-        if(chat.members&&chat.members.includes(name)){
-          const newMembers=chat.members.filter(m=>m!==name);
-          await set(ref(db,"chats/"+chat.id+"/members"),newMembers);
-        }
-      }
-    }
-    showToast("✅ تم حذف المستخدم: "+name,"🗑️");
-    // Refresh admin data
+    const B="https://frostchat-whithout-number-default-rtdb.firebaseio.com";
+    // DELETE via REST API directly
+    const r=await fetch(B+"/users/"+encodeURIComponent(name)+".json",{method:"DELETE"});
+    if(!r.ok)throw new Error("HTTP "+r.status);
+    // Remove from local state
     if(S.adminData&&S.adminData.users) delete S.adminData.users[name];
+    showToast("✅ تم حذف المستخدم: "+name,"🗑️");
     render();
   }catch(e){
-    showToast("❌ خطأ: "+e.message,"");
+    showToast("❌ فشل الحذف: "+e.message,"");
     console.error(e);
   }
 }
@@ -1336,28 +1324,43 @@ async function adminSetVIP(name, code){
 }
 
 async function adminUnbanUser(name){
-  if(!window.__fb||window.__fb.DEMO_MODE)return;
-  const {db,ref,set} = window.__fb;
-  await set(ref(db,"users/"+name+"/banned"), false);
-  showToast("✅ Unbanned: "+name, "🔓");
-  render();
+  try{
+    const B="https://frostchat-whithout-number-default-rtdb.firebaseio.com";
+    const r=await fetch(B+"/users/"+encodeURIComponent(name)+".json",{
+      method:"PATCH",
+      headers:{"Content-Type":"application/json"},
+      body:JSON.stringify({banned:false,banReason:null,bannedAt:null})
+    });
+    if(!r.ok)throw new Error("HTTP "+r.status);
+    if(S.adminData&&S.adminData.users&&S.adminData.users[name])
+      S.adminData.users[name].banned=false;
+    showToast("✅ تم فك الحظر: "+name,"🔓");
+    render();
+  }catch(e){
+    showToast("❌ فشل: "+e.message,"");
+    console.error(e);
+  }
 }
 
 async function adminBanUser(name, reason){
-  if(!confirm("Ban user: "+name+"?")) return;
-  if(!window.__fb||window.__fb.DEMO_MODE){
+  if(!confirm("حظر المستخدم: "+name+"?")) return;
+  try{
+    const B="https://frostchat-whithout-number-default-rtdb.firebaseio.com";
+    const banData={banned:true,banReason:reason||"Banned by admin",bannedAt:Date.now(),online:false};
+    const r=await fetch(B+"/users/"+encodeURIComponent(name)+".json",{
+      method:"PATCH",
+      headers:{"Content-Type":"application/json"},
+      body:JSON.stringify(banData)
+    });
+    if(!r.ok)throw new Error("HTTP "+r.status);
     if(S.adminData&&S.adminData.users&&S.adminData.users[name])
-      S.adminData.users[name].banned=true;
-    showToast("🚫 Banned: "+name,"");render();return;
+      Object.assign(S.adminData.users[name],banData);
+    showToast("🚫 تم الحظر: "+name,"");
+    render();
+  }catch(e){
+    showToast("❌ فشل الحظر: "+e.message,"");
+    console.error(e);
   }
-  const {db,ref,set} = window.__fb;
-  await set(ref(db,"users/"+name+"/banned"), true);
-  await set(ref(db,"users/"+name+"/banReason"), reason||"Banned by admin");
-  await set(ref(db,"users/"+name+"/bannedAt"), Date.now());
-  // Force logout by clearing their session marker
-  await set(ref(db,"users/"+name+"/online"), false);
-  showToast("🚫 Banned: "+name, "");
-  render();
 }
 
 function renderAdminPanel(){
@@ -1784,8 +1787,7 @@ function render(){
   if(S.callScreen)root.appendChild(renderCallScreen());
   if(S.forwardMsg)root.appendChild(renderForwardModal());
   if(S.themeModal)root.appendChild(renderThemePicker(S.themeModal));
-  if(S.storyModal)root.appendChild(renderStoryModal());
-  if(S.viewStory)root.appendChild(renderViewStory());
+
   if(S.gameState&&S.gameType&&GAMES[S.gameType])root.appendChild(GAMES[S.gameType].render(S.gameState,S.activeChat?.id));
   if(S.adminPanel&&isAdmin())root.appendChild(renderAdminPanel());
   // v8 overlays
@@ -2441,7 +2443,7 @@ function renderChatPanel(){
   }
 
   // Stories bar
-  wrap.appendChild(renderStoriesBar());
+  // Stories removed
 
   // Messages area
   const chatTheme=getChatTheme(c.id);
@@ -2533,7 +2535,7 @@ function renderChatPanel(){
     const attachItems=[
       {icon:"📸",lb:"Send Image",fn:()=>{openFilePicker();S.attachOpen=false;}},
       {icon:"📍",lb:"Location",fn:()=>{shareLocation();S.attachOpen=false;render();}},
-      {icon:"📖",lb:"Post Story",fn:()=>{S.storyModal=true;S.attachOpen=false;render();}},
+
       {icon:"🎮",lb:"Play Game",fn:()=>{S.gameMenu=!S.gameMenu;S.attachOpen=false;render();}},
     ];
     attachItems.forEach(item=>{
