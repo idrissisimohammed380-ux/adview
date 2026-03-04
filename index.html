@@ -719,8 +719,8 @@ body::before {
 
 /* ── MOBILE ── */
 @media (max-width: 700px) {
-  #sidebar { position: fixed; left: 0; top: 0; bottom: 0; z-index: 200; transform: translateX(-100%); transition: transform .28s cubic-bezier(.22,1,.36,1); width: 100vw; min-width: 0; height: 100dvh; }
-  #sidebar.open { transform: translateX(0); }
+  #sidebar { position: fixed; left: 0; top: 0; bottom: 0; z-index: 200; transform: translateX(0); transition: transform .28s cubic-bezier(.22,1,.36,1); width: 100vw; min-width: 0; height: 100dvh; }
+  #sidebar.hidden-mobile { transform: translateX(-100%); }
   .sidebar-overlay { position: fixed; inset: 0; background: rgba(0,0,0,.5); z-index: 199; display: none; backdrop-filter: blur(2px); }
   .sidebar-overlay.show { display: block; }
   #chat-panel { width: 100%; }
@@ -1962,14 +1962,22 @@ function render(){
 
   // Sidebar
   const sb=h("div",{id:"sidebar"});
-  if(S.activeChat&&window.innerWidth<=700)sb.style.display="none";
+  const isMobile = window.innerWidth <= 700;
+  // On mobile: hide sidebar only when a chat is open
+  if(isMobile && S.activeChat) sb.style.display="none";
   sb.appendChild(renderSidebar());
   app.appendChild(sb);
 
   // Chat panel
   const cp=h("div",{id:"chat-panel"});
-  if(S.activeChat)cp.appendChild(renderChatPanel());
-  else cp.appendChild(renderEmptyState());
+  // On mobile: hide chat panel when no active chat (show sidebar instead)
+  if(isMobile && !S.activeChat){
+    cp.style.display="none";
+  } else if(S.activeChat){
+    cp.appendChild(renderChatPanel());
+  } else {
+    cp.appendChild(renderEmptyState());
+  }
   app.appendChild(cp);
 
   root.appendChild(app);
