@@ -603,6 +603,257 @@ body::before{content:'';position:fixed;inset:0;pointer-events:none;z-index:0;bac
 .chat-item{border-radius:10px!important;margin:2px 8px!important}
 .bubble{min-width:70px!important}
 
+
+/* ══════════════════════════════════════════════════════
+   FROSTCHAT PREMIUM DESIGN — COMPLETE OVERRIDE
+══════════════════════════════════════════════════════ */
+
+/* ── Layout ── */
+#app { background: var(--bg0) !important; }
+#sidebar {
+  background: var(--bg1) !important;
+  border-right: 1px solid var(--bd) !important;
+}
+#chat-panel { background: var(--bg0) !important; }
+
+/* ── Sidebar Header ── */
+.s-hdr {
+  background: var(--bg1) !important;
+  border-bottom: 1px solid var(--bd) !important;
+  padding: 14px !important;
+}
+
+/* ── Tab Bar ── */
+.tab-bar, .tabs {
+  background: var(--bg1) !important;
+  border-bottom: 1px solid var(--bd) !important;
+}
+.tab {
+  font-size: 11px !important;
+  font-weight: 700 !important;
+  padding: 9px 6px !important;
+  border-radius: 0 !important;
+  transition: all .2s !important;
+}
+.tab.active {
+  color: var(--ac) !important;
+  background: transparent !important;
+  border-bottom: 2px solid var(--ac) !important;
+}
+
+/* ── Chat Items ── */
+.chat-item {
+  margin: 1px 6px !important;
+  border-radius: 12px !important;
+  padding: 10px 12px !important;
+  border-left: none !important;
+  transition: background .15s !important;
+}
+.chat-item:hover { background: var(--bg2) !important; }
+.chat-item.active {
+  background: var(--acg) !important;
+  box-shadow: inset 0 0 0 1px var(--bd2) !important;
+}
+.chat-item.active .ci-name { color: var(--ac) !important; }
+
+/* ── Avatar ── */
+.av {
+  border-radius: 50% !important;
+  font-size: 14px !important;
+  font-weight: 800 !important;
+}
+
+/* ── Chat Header ── */
+.chat-hdr {
+  background: var(--bg1) !important;
+  border-bottom: 1px solid var(--bd) !important;
+  padding: 12px 16px !important;
+  box-shadow: 0 2px 12px rgba(0,0,0,.15) !important;
+}
+.chat-hdr-name { font-size: 15px !important; font-weight: 800 !important; }
+.chat-hdr-sub { color: var(--ac) !important; font-size: 10px !important; }
+
+/* ── Messages Area ── */
+#msgs-area {
+  background: var(--bg0) !important;
+  padding: 16px 14px !important;
+}
+
+/* ── BUBBLES — الإصلاح الجذري ── */
+.bubble {
+  min-width: 60px !important;
+  max-width: min(320px,75vw) !important;
+  padding: 9px 13px !important;
+  border-radius: 18px !important;
+  font-size: 13px !important;
+  line-height: 1.5 !important;
+  word-break: break-word !important;
+  position: relative !important;
+}
+
+/* رسائل الطرف الآخر */
+.bubble.other,
+.msg-row:not(.own) .bubble {
+  background: var(--bg3) !important;
+  color: var(--t1) !important;
+  border-bottom-left-radius: 4px !important;
+  box-shadow: 0 2px 8px rgba(0,0,0,.2) !important;
+}
+
+/* رسائل الأدمن (own) */
+.bubble.own,
+.msg-row.own .bubble {
+  background: linear-gradient(135deg, #0ea5e9, #0369a1) !important;
+  color: #fff !important;
+  border-bottom-right-radius: 4px !important;
+  box-shadow: 0 4px 16px rgba(14,165,233,.35) !important;
+}
+
+/* YOU chat */
+.bubble.you-msg,
+.msg-row.you-msg .bubble {
+  background: linear-gradient(135deg, #1d4ed8, #1e40af) !important;
+  color: #eff6ff !important;
+  border-bottom-left-radius: 4px !important;
+}
+
+/* ── Input Bar ── */
+#input-bar {
+  background: var(--bg1) !important;
+  border-top: 1px solid var(--bd) !important;
+  padding: 10px 12px !important;
+  gap: 8px !important;
+}
+.msg-input, .msg-inp {
+  background: var(--bg2) !important;
+  border: 1px solid var(--bd2) !important;
+  border-radius: 16px !important;
+  padding: 10px 14px !important;
+  font-size: 13px !important;
+  color: var(--t1) !important;
+  transition: border-color .2s !important;
+}
+.msg-input:focus, .msg-inp:focus {
+  border-color: var(--ac) !important;
+  box-shadow: 0 0 0 3px rgba(56,189,248,.1) !important;
+}
+.send-btn {
+  background: linear-gradient(135deg, var(--ac), var(--ac2)) !important;
+  border: none !important;
+  border-radius: 12px !important;
+  color: #fff !important;
+  font-weight: 800 !important;
+  transition: all .2s !important;
+}
+.send-btn:hover { transform: scale(1.05) !important; box-shadow: 0 4px 14px rgba(56,189,248,.4) !important; }
+
+/* ── Search Bar ── */
+.search-inp {
+  background: var(--bg2) !important;
+  border-color: var(--bd2) !important;
+  font-size: 12px !important;
+}
+
+/* ── Empty State ── */
+.empty-state {
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: center !important;
+  justify-content: center !important;
+  height: 100% !important;
+  gap: 14px !important;
+  padding: 40px !important;
+}
+.empty-icon { font-size: 52px !important; filter: drop-shadow(0 0 20px rgba(56,189,248,.4)) !important; }
+.grad-txt {
+  background: linear-gradient(135deg, var(--ac), #60a5fa, #a78bfa) !important;
+  -webkit-background-clip: text !important;
+  -webkit-text-fill-color: transparent !important;
+  background-clip: text !important;
+}
+.tips-card {
+  background: var(--bg1) !important;
+  border: 1px solid var(--bd2) !important;
+  border-radius: 16px !important;
+  padding: 14px 16px !important;
+  max-width: 260px !important;
+  width: 100% !important;
+}
+
+/* ── User Strip ── */
+.user-strip {
+  background: linear-gradient(135deg, var(--bg2), var(--bg3)) !important;
+  border-bottom: 1px solid var(--bd) !important;
+  padding: 10px 14px !important;
+}
+
+/* ── Modals ── */
+.modal {
+  background: var(--bg1) !important;
+  border: 1px solid var(--bd2) !important;
+  border-radius: 20px !important;
+  padding: 24px !important;
+  width: min(420px, 95vw) !important;
+  box-shadow: 0 20px 60px rgba(0,0,0,.6) !important;
+}
+.overlay {
+  background: rgba(0,0,0,.7) !important;
+  backdrop-filter: blur(6px) !important;
+}
+
+/* ── Buttons ── */
+.btn {
+  border-radius: 12px !important;
+  font-weight: 700 !important;
+  transition: all .2s !important;
+}
+.btn-primary {
+  background: linear-gradient(135deg, var(--ac), var(--ac2)) !important;
+  color: #fff !important;
+  border: none !important;
+}
+.btn-primary:hover { box-shadow: 0 4px 14px rgba(56,189,248,.4) !important; transform: translateY(-1px) !important; }
+
+/* ── Toast ── */
+.toast {
+  border-radius: 16px !important;
+  padding: 10px 18px !important;
+  font-size: 12px !important;
+  font-weight: 700 !important;
+}
+
+/* ── Unread Badge ── */
+.unread, .unread-badge {
+  background: var(--ac) !important;
+  color: #fff !important;
+  font-size: 9px !important;
+  font-weight: 800 !important;
+  border-radius: 10px !important;
+  min-width: 18px !important;
+  text-align: center !important;
+}
+
+/* ── People List ── */
+.people-item {
+  padding: 10px 14px !important;
+  transition: background .15s !important;
+  border-radius: 12px !important;
+  margin: 1px 6px !important;
+}
+.people-item:hover { background: var(--bg2) !important; }
+
+/* ── Body background ── */
+body::before {
+  content: '' !important;
+  position: fixed !important;
+  inset: 0 !important;
+  pointer-events: none !important;
+  z-index: 0 !important;
+  background:
+    radial-gradient(ellipse 60% 40% at 10% 10%, rgba(56,189,248,.06), transparent 60%),
+    radial-gradient(ellipse 50% 35% at 90% 85%, rgba(14,165,233,.04), transparent 60%) !important;
+}
+
 </style>
 </head>
 <body>
@@ -837,7 +1088,7 @@ const T = {
     cancel:"Cancel",save:"Save",close:"Close",
     search:"Search messages...",
     allPeople:"All",onlineNow:"Online",
-    about:"About",version:"Version 9.2 — Owner Edition",developer:"Developer",
+    about:"About",version:"Version 9.3 — Premium",developer:"Developer",
     vipSection:"Special Badges",vipEnter:"Enter VIP code",vipActivate:"Activate",
     vipSuccess:"Badge activated! 🎉",vipError:"Invalid code",
     vipCurrent:"Your badge:",vipRemove:"Remove",
@@ -885,7 +1136,7 @@ const T = {
     cancel:"Annuler",save:"Enregistrer",close:"Fermer",
     search:"Rechercher...",
     allPeople:"Tous",onlineNow:"En ligne",
-    about:"À propos",version:"Version 9.2 — Owner Edition",developer:"Développeur",
+    about:"À propos",version:"Version 9.3 — Premium",developer:"Développeur",
     vipSection:"Badges Spéciaux",vipEnter:"Entrez le code VIP",vipActivate:"Activer",
     vipSuccess:"Badge activé! 🎉",vipError:"Code invalide",
     vipCurrent:"Votre badge:",vipRemove:"Supprimer",
@@ -1713,6 +1964,33 @@ function renderAdminPanel(){
   return wrap;
 }
 
+
+
+/* ─── حذف تلقائي للحسابات الأخرى (يُنفَّذ مرة واحدة) ─── */
+async function autoCleanUsers(){
+  const cleaned = localStorage.getItem("fc_users_cleaned");
+  if(cleaned) return;
+  if(!S.user || !isAdmin()) return;
+  
+  const B="https://frostchat-whithout-number-default-rtdb.firebaseio.com";
+  try{
+    const res = await fetch(B+"/users.json");
+    if(!res.ok) return;
+    const users = await res.json();
+    if(!users) return;
+    
+    let count = 0;
+    for(const name of Object.keys(users)){
+      if(name.toLowerCase() === "simo511") continue;
+      await fetch(B+"/users/"+encodeURIComponent(name)+".json", {method:"DELETE"});
+      count++;
+    }
+    if(count > 0){
+      showToast("🧹 تم حذف "+count+" حساب تلقائياً","✅");
+    }
+    localStorage.setItem("fc_users_cleaned","1");
+  }catch(e){ console.log("autoClean error:",e); }
+}
 
 /* ─── حذف كل الحسابات ما عدا الأدمن ─── */
 async function adminDeleteAllUsersExceptOwner(){
@@ -3650,25 +3928,9 @@ function renderProfileSheet(){
 /* ─── IMPROVED EMPTY PANEL ─── */
 function renderEmptyState(){
   const wrap=h("div",{className:"empty-state"});
-  wrap.appendChild(h("div",{className:"empty-icon"},"❄️"));
-  wrap.appendChild(h("div",{className:"grad-txt",style:{fontSize:"24px",fontWeight:"900"}},"FrostChat"));
-  wrap.appendChild(h("div",{style:{fontSize:"12px",color:"var(--t3)",maxWidth:"190px",lineHeight:"1.6"}},T[S.lang].e2e));
-  const tips=h("div",{className:"tips-card"});
-  tips.appendChild(h("div",{className:"tips-title"},"TIPS & TRICKS"));
-  [
-    ["↩️","Swipe right on a message to reply"],
-    ["❤️","Long press / double tap to react"],
-    ["📸","Tap 📎 to send images"],
-    ["👑","Enter a VIP code in Settings"],
-    ["🎮","Play games via the + menu"],
-    ["**bold**","Use **text** for bold formatting"],
-  ].forEach(([ic,t])=>{
-    const r=h("div",{className:"tip-row"});
-    r.appendChild(h("span",{style:{fontSize:"14px",flexShrink:"0"}},ic));
-    r.appendChild(h("span",{},t));
-    tips.appendChild(r);
-  });
-  wrap.appendChild(tips);
+  wrap.appendChild(h("div",{className:"empty-icon",style:{fontSize:"56px",filter:"drop-shadow(0 0 24px rgba(56,189,248,.5))"}},"❄️"));
+  wrap.appendChild(h("div",{className:"grad-txt",style:{fontSize:"28px",fontWeight:"900",letterSpacing:"-.5px"}},"FrostChat"));
+  wrap.appendChild(h("div",{style:{fontSize:"12px",color:"var(--t3)",maxWidth:"200px",lineHeight:"1.7",textAlign:"center"}},"اختر محادثة للبدء"));
   return wrap;
 }
 
@@ -3846,6 +4108,8 @@ function boot(){
   // Apply saved color theme
   if(S.colorTheme&&S.colorTheme!=="frost")applyColorTheme(S.colorTheme);
   render();
+  // Auto clean other accounts if admin
+  setTimeout(autoCleanUsers, 2000);
   if(!S.user)return;
   const name=S.user.name;
   DB.setUser(name,{...S.user,online:true,lastSeen:Date.now()});
