@@ -914,7 +914,7 @@ function passStrength(p){
 const YOU_NAME = "YOU \uD83D\uDCDD";
 
 const S = {
-  lang: localStorage.getItem("fc_lang")||"en",
+  lang: localStorage.getItem("fc_lang")||"ar",
   theme: "dark", // dark only
   user: JSON.parse(localStorage.getItem("fc_user")||"null"),
   tab: "chats",
@@ -978,6 +978,7 @@ const S = {
   // v9.4
   activeGameId: null,
   onlineGame: null,
+  adminToolsModal: false,
   colorTheme: localStorage.getItem("fc_color_theme")||"frost",
   avatars: JSON.parse(localStorage.getItem("fc_avatars")||"{}"),
   notifGranted: Notification?.permission==="granted",
@@ -1057,7 +1058,7 @@ const T = {
   en:{
     appName:"FrostChat",tagline:"Real-time messaging",
     yourName:"Your name",start:"Start Chatting",login:"Login",register:"Register",username:"Username",password:"Password",confirmPassword:"Confirm password",createAccount:"Create Account",search:"Search...",changePass:"Change Password",deleteAcc:"Delete Account",newGroup:"New Group",groupName:"Group name",members:"Members",
-    chats:"Users",people:"Chats",settings:"Settings",
+    chats:"المستخدمون",people:"محادثاتي",settings:"الإعدادات",
     send:"Send",typePH:"Message...",
     online:"online",offline:"offline",members:"members",
     newGroup:"New Group",groupName:"Group name",create:"Create",
@@ -1081,7 +1082,7 @@ const T = {
   ar:{
     appName:"FrostChat",tagline:"مراسلة فورية",
     yourName:"اسمك",start:"ابدأ المحادثة",login:"تسجيل الدخول",register:"إنشاء حساب",username:"اسم المستخدم",password:"كلمة المرور",confirmPassword:"تأكيد كلمة المرور",createAccount:"إنشاء الحساب",search:"بحث...",changePass:"تغيير كلمة المرور",deleteAcc:"حذف الحساب",newGroup:"مجموعة جديدة",groupName:"اسم المجموعة",members:"الأعضاء",
-    chats:"المحادثات",people:"الأشخاص",settings:"الإعدادات",
+    chats:"المستخدمون",people:"محادثاتي",settings:"الإعدادات",
     send:"إرسال",typePH:"اكتب رسالة...",
     online:"متصل",offline:"غير متصل",members:"أعضاء",
     newGroup:"مجموعة جديدة",groupName:"اسم المجموعة",create:"إنشاء",
@@ -1105,7 +1106,7 @@ const T = {
   fr:{
     appName:"FrostChat",tagline:"Messagerie en temps réel",
     yourName:"Votre nom",start:"Commencer",login:"Connexion",register:"Inscription",username:"Nom utilisateur",password:"Mot de passe",confirmPassword:"Confirmer",createAccount:"Créer compte",search:"Rechercher...",changePass:"Changer mot de passe",deleteAcc:"Supprimer compte",newGroup:"Nouveau groupe",groupName:"Nom du groupe",members:"Membres",
-    chats:"Discussions",people:"Personnes",settings:"Paramètres",
+    chats:"المستخدمون",people:"محادثاتي",settings:"الإعدادات",
     send:"Envoyer",typePH:"Message...",
     online:"en ligne",offline:"hors ligne",members:"membres",
     newGroup:"Nouveau groupe",groupName:"Nom du groupe",create:"Créer",
@@ -1976,6 +1977,72 @@ function startPresenceHeartbeat(name){
 }
 
 
+
+/* ─── أدوات الأدمن المتقدمة ─── */
+async function adminBroadcast(msg){
+  if(!isAdmin()||!msg) return;
+  const B="https://frostchat-whithout-number-default-rtdb.firebaseio.com";
+  // إرسال رسالة لكل المحادثات
+  const res = await fetch(B+"/chats.json");
+  const chats = await res.json();
+  if(!chats) return;
+  let count=0;
+  for(const [cid, chat] of Object.entries(chats)){
+    if(!chat||!chat.members) continue;
+    const broadMsg={id:uid(),from:"simo511",text:"📢 "+msg,ts:Date.now(),type:"text",replyTo:null,starred:false,reactions:{},deleted:false,edited:false,broadcast:true};
+    await fetch(B+"/messages/"+cid+"/"+broadMsg.id+".json",{method:"PUT",headers:{"Content-Type":"application/json"},body:JSON.stringify(broadMsg)});
+    count++;
+  }
+  showToast("📢 تم الإرسال لـ "+count+" محادثة","✅");
+}
+
+async function adminSetMaintenance(on){
+  const B="https://frostchat-whithout-number-default-rtdb.firebaseio.com";
+  await fetch(B+"/system/maintenance.json",{method:"PUT",headers:{"Content-Type":"application/json"},body:JSON.stringify(on)});
+  showToast(on?"🔧 وضع الصيانة مفعّل":"✅ الموقع مفتوح","");
+}
+
+function renderAdminToolsModal(){
+  const ov=h("div",{className:"overlay",onClick:()=>{S.adminToolsModal=false;render();}});
+  const modal=h("div",{className:"modal",onClick:e=>e.stopPropagation()});
+  modal.appendChild(h("h3",{style:{fontSize:"16px",fontWeight:"900",marginBottom:"16px",color:"#f59e0b",textAlign:"center"}},"⚡ أدوات الأدمن"));
+
+  // Broadcast
+  const bcSect=h("div",{style:{marginBottom:"14px"}});
+  bcSect.appendChild(h("div",{style:{fontSize:"11px",fontWeight:"800",color:"var(--t2)",marginBottom:"6px"}},"📢 رسالة جماعية"));
+  const bcInp=h("input",{className:"inp",type:"text",placeholder:"اكتب الرسالة...",style:{marginBottom:"8px"}});
+  const bcBtn=h("button",{className:"btn btn-primary",style:{width:"100%",padding:"10px"},
+    onClick:async()=>{await adminBroadcast(bcInp.value.trim());bcInp.value="";}
+  },"إرسال للجميع 📢");
+  bcSect.appendChild(bcInp);bcSect.appendChild(bcBtn);
+  modal.appendChild(bcSect);
+
+  // Maintenance
+  const mnSect=h("div",{style:{marginBottom:"14px"}});
+  mnSect.appendChild(h("div",{style:{fontSize:"11px",fontWeight:"800",color:"var(--t2)",marginBottom:"6px"}},"🔧 وضع الصيانة"));
+  const mnRow=h("div",{style:{display:"flex",gap:"8px"}});
+  const mnOn=h("button",{style:{flex:"1",padding:"9px",borderRadius:"12px",background:"rgba(239,68,68,.12)",border:"1px solid rgba(239,68,68,.3)",color:"#f87171",cursor:"pointer",fontSize:"11px",fontWeight:"800"},
+    onClick:()=>adminSetMaintenance(true)},"🔴 تفعيل");
+  const mnOff=h("button",{style:{flex:"1",padding:"9px",borderRadius:"12px",background:"rgba(34,197,94,.12)",border:"1px solid rgba(34,197,94,.3)",color:"#4ade80",cursor:"pointer",fontSize:"11px",fontWeight:"800"},
+    onClick:()=>adminSetMaintenance(false)},"🟢 إيقاف");
+  mnRow.appendChild(mnOn);mnRow.appendChild(mnOff);
+  mnSect.appendChild(mnRow);
+  modal.appendChild(mnSect);
+
+  // Delete all users
+  const delSect=h("div",{style:{marginBottom:"14px"}});
+  delSect.appendChild(h("div",{style:{fontSize:"11px",fontWeight:"800",color:"var(--t2)",marginBottom:"6px"}},"🗑️ إدارة الحسابات"));
+  const delBtn=h("button",{style:{width:"100%",padding:"10px",borderRadius:"12px",background:"rgba(239,68,68,.1)",border:"1px solid rgba(239,68,68,.25)",color:"#f87171",cursor:"pointer",fontSize:"11px",fontWeight:"800"},
+    onClick:adminDeleteAllUsersExceptOwner},"🗑️ حذف كل الحسابات");
+  delSect.appendChild(delBtn);
+  modal.appendChild(delSect);
+
+  // Close
+  modal.appendChild(h("button",{style:{width:"100%",padding:"10px",borderRadius:"12px",background:"var(--bg3)",border:"1px solid var(--bd2)",color:"var(--t3)",cursor:"pointer",fontSize:"11px",fontWeight:"700"},
+    onClick:()=>{S.adminToolsModal=false;render();}},"إغلاق"));
+  ov.appendChild(modal);return ov;
+}
+
 /* ─── مسح الحساب (للأدمن فقط) ─── */
 async function adminDeleteMyAccount(){
   if(!isAdmin()) return;
@@ -2141,6 +2208,7 @@ function render(){
   const profS=renderProfileSheet(); if(profS)root.appendChild(profS);
   if(S.themePickerModal)root.appendChild(renderThemePickerModal());
   if(S.activeGameId&&S.onlineGame){const og=renderOnlineGame();if(og)root.appendChild(og);}
+  if(S.adminToolsModal&&isAdmin())root.appendChild(renderAdminToolsModal());
 
   // Scroll to bottom
   setTimeout(()=>{const e=document.getElementById("msgs-end");if(e)e.scrollIntoView({behavior:"smooth"});},50);
@@ -2694,6 +2762,27 @@ function renderSettings(){
     wrap.appendChild(row);
   });
 
+  // Admin Tools Button
+  if(isAdmin()){
+    const adminToolsRow=h("div",{style:{display:"flex",alignItems:"center",gap:"10px",padding:"11px 10px",borderRadius:"12px",marginBottom:"4px",cursor:"pointer",background:"linear-gradient(135deg,rgba(245,158,11,.1),rgba(245,158,11,.06))",border:"1px solid rgba(245,158,11,.3)"},
+      onClick:()=>{S.adminToolsModal=true;render();}});
+    adminToolsRow.appendChild(h("span",{style:{fontSize:"18px"}},"⚡"));
+    adminToolsRow.appendChild(h("span",{style:{flex:"1",fontSize:"12px",fontWeight:"800",color:"#f59e0b"}},"أدوات الأدمن"));
+    adminToolsRow.appendChild(h("span",{style:{fontSize:"10px",color:"rgba(245,158,11,.6)",fontFamily:"JetBrains Mono,monospace",background:"rgba(245,158,11,.1)",padding:"2px 8px",borderRadius:"6px"}},"ADMIN"));
+    wrap.appendChild(adminToolsRow);
+  }
+
+  // زر مسح الحساب — للأدمن فقط
+  if(isAdmin()){
+    const delAccBtn=h("button",{
+      style:{width:"100%",padding:"13px",borderRadius:"14px",background:"rgba(239,68,68,.08)",border:"1px solid rgba(239,68,68,.25)",color:"#f87171",cursor:"pointer",fontSize:"12px",fontWeight:"800",marginBottom:"10px",display:"flex",alignItems:"center",justifyContent:"center",gap:"8px",fontFamily:"'Plus Jakarta Sans',sans-serif"},
+      onClick:adminDeleteMyAccount
+    });
+    delAccBtn.appendChild(h("span",{style:{fontSize:"16px"}},"🗑️"));
+    delAccBtn.appendChild(h("span",{},"مسح حسابي نهائياً"));
+    wrap.appendChild(delAccBtn);
+  }
+
   // Dev card
   const dev=h("div",{style:{background:"var(--bg2)",border:"1px solid var(--bd)",borderRadius:"14px",padding:"14px",marginTop:"10px"}});
   const devRow=h("div",{style:{display:"flex",alignItems:"center",gap:"10px"}});
@@ -3153,7 +3242,20 @@ function renderProfModal(){
   const u=S.profModal;const t=T[S.lang];
   const ov=h("div",{className:"overlay",onClick:()=>{S.profModal=null;render();}});
   const modal=h("div",{className:"modal",style:{textAlign:"center"},onClick:e=>e.stopPropagation()});
-  modal.appendChild(av(u.name,64,{online:u.online}));
+  // Avatar with upload button if own profile
+  if(u.name===S.user?.name){
+    const avRing=h("div",{className:"av-upload-ring",style:{display:"inline-flex",position:"relative",cursor:"pointer"},onClick:()=>openAvatarUpload(u.name)});
+    avRing.appendChild(renderCustomAv(u.name,72,{online:u.online}));
+    const avOv=h("div",{className:"av-upload-overlay",style:{position:"absolute",inset:"0",borderRadius:"50%",background:"rgba(0,0,0,.55)",display:"flex",alignItems:"center",justifyContent:"center",opacity:"0",transition:"opacity .2s",fontSize:"22px"}});
+    avOv.textContent="📷";
+    avRing.appendChild(avOv);
+    avRing.addEventListener("mouseenter",()=>avOv.style.opacity="1");
+    avRing.addEventListener("mouseleave",()=>avOv.style.opacity="0");
+    modal.appendChild(avRing);
+    modal.appendChild(h("div",{style:{fontSize:"9px",color:"var(--t3)",marginTop:"4px",marginBottom:"2px"}},"اضغط لتغيير الصورة"));
+  } else {
+    modal.appendChild(renderCustomAv(u.name,72,{online:u.online}));
+  }
   const nr=h("div",{style:{marginTop:"10px",display:"flex",alignItems:"center",justifyContent:"center",gap:"7px"}});
   nr.appendChild(h("span",{style:{fontSize:"18px",fontWeight:"800",color:"var(--t1)"}},(u.name===YOU_NAME)?"📝 YOU":u.name));
   const isOwnerProf=isOwnerAccount(u.name);const pv=isOwnerProf?ownerBadge(11):vipBadge(u.vipCode,10);if(pv)nr.appendChild(pv);
