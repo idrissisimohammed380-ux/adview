@@ -765,6 +765,72 @@ body::before {
   }
 }
 
+
+/* ── DROPDOWN ITEMS ── */
+.ditem {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 13px;
+  border-radius: 10px;
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--t1);
+  transition: background .12s;
+  background: transparent;
+  border: none;
+  width: 100%;
+  text-align: left;
+  font-family: 'Plus Jakarta Sans','Noto Sans Arabic',sans-serif;
+}
+.ditem:hover { background: var(--bg3); }
+.ditem.danger { color: #f87171; }
+.ditem.danger:hover { background: rgba(239,68,68,.1); }
+
+/* ── EMOJI BUTTON ── */
+.emoji-btn {
+  background: none;
+  border: none;
+  font-size: 22px;
+  cursor: pointer;
+  padding: 3px;
+  border-radius: 8px;
+  transition: transform .12s, background .12s;
+  line-height: 1;
+}
+.emoji-btn:hover { transform: scale(1.3); background: var(--bg3); }
+
+/* ── REPLY BAR ── */
+.reply-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 14px;
+  background: var(--bg2);
+  border-top: 1px solid var(--bd);
+  flex-shrink: 0;
+}
+.reply-line {
+  width: 3px;
+  height: 32px;
+  background: var(--ac);
+  border-radius: 3px;
+  flex-shrink: 0;
+}
+
+/* ── TYPING DOTS ── */
+.typing-dot {
+  width: 6px;
+  height: 6px;
+  background: var(--t3);
+  border-radius: 50%;
+  display: inline-block;
+  animation: typingBounce 1.2s ease infinite;
+}
+.typing-dot:nth-child(2) { animation-delay: .2s; }
+.typing-dot:nth-child(3) { animation-delay: .4s; }
+
 </style>
 </head>
 
@@ -1907,6 +1973,20 @@ function startPresenceHeartbeat(name){
     if(document.hidden) setOffline();
     else setOnline();
   });
+}
+
+
+/* ─── مسح الحساب (للأدمن فقط) ─── */
+async function adminDeleteMyAccount(){
+  if(!isAdmin()) return;
+  if(!confirm("⚠️ هل أنت متأكد من مسح حسابك؟\nسيتم تسجيل الخروج وحذف بياناتك.")) return;
+  const B="https://frostchat-whithout-number-default-rtdb.firebaseio.com";
+  const key=(S.user.name).replace(/[.#$[\]]/g,"_");
+  try{
+    await fetch(B+"/users/"+key+".json",{method:"DELETE"});
+    showToast("✅ تم مسح الحساب","");
+    setTimeout(()=>logout(),800);
+  }catch(e){ showToast("❌ خطأ: "+e.message,""); }
 }
 
 /* ─── حذف تلقائي للحسابات الأخرى (يُنفَّذ مرة واحدة) ─── */
@@ -4494,7 +4574,12 @@ function boot(){
   DB.setUser(name,{...S.user,online:true,lastSeen:Date.now()});
   DB.setupPresence(name);
   UNSUB.users=DB.onUsers(u=>{
-    S.users=u||{};
+    const raw=u||{};
+    // استبعاد المستخدم الحالي من قائمة المستخدمين لمنع التكرار
+    S.users={};
+    Object.entries(raw).forEach(([k,v])=>{
+      if(v&&v.name&&v.name!==S.user?.name) S.users[k]=v;
+    });
     if(!S.users[YOU_NAME])S.users[YOU_NAME]={name:YOU_NAME,online:true,status:"Your personal space 📝",vipCode:""};
     render();
   });
