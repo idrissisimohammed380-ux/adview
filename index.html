@@ -635,11 +635,16 @@ body::before{content:'';position:fixed;inset:0;pointer-events:none;z-index:0;bac
     off:function(){if(L[p]){clearInterval(L[p].t);delete L[p];}},
     onDisconnect:function(){return{set:function(v){window.addEventListener("beforeunload",function(){navigator.sendBeacon(url(p),JSON.stringify(v));});}};}
   };}
-  get(".info").then(function(d){
-    window.__fbConnected=d!==null;
+  // Use a simple fetch to check connectivity instead of .info
+  fetch(B+"/.json?shallow=true",{method:"GET"}).then(function(r){
+    window.__fbConnected=r.ok||r.status===401||r.status===403;
     var b=document.getElementById("conn-badge");
-    if(b){b.style.display=d!==null?"none":"flex";}
+    if(b){b.style.display=window.__fbConnected?"none":"flex";}
     if(window.__appRender)window.__appRender();
+  }).catch(function(){
+    window.__fbConnected=false;
+    var b=document.getElementById("conn-badge");
+    if(b){b.style.display="flex";}
   });
   window.__fb={DEMO_MODE:false,
     ref:function(db,p){return ref(p);},
@@ -971,7 +976,8 @@ const DB = {
     const userRef=ref(db,"users/"+key);
     const od=onDisconnect(userRef);
     if(od&&od.set)od.set({...S.user,online:false,lastSeen:Date.now()});
-    onValue(ref(db,".info/connected"),snap=>{
+    // .info/connected not supported in REST — skip
+    if(false){
       if(snap.val()===true)set(ref(db,"users/"+key),{...S.user,online:true,lastSeen:Date.now()});
     });
   }
