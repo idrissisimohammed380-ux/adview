@@ -618,13 +618,15 @@ body::before{content:'';position:fixed;inset:0;pointer-events:none;z-index:0;bac
 (function(){
   var B="https://frostchat-whithout-number-default-rtdb.firebaseio.com",L={};
   function url(p){return B+"/"+p.replace(/^\/+/,"")+".json";}
+  // Block .info paths — not supported in REST API
+  function safeGet(p){if(p&&p.indexOf(".info")!==-1)return Promise.resolve(null);return get(p);}
   async function get(p){try{var r=await fetch(url(p));return r.ok?await r.json():null;}catch(e){return null;}}
   async function set(p,v){try{await fetch(url(p),{method:"PUT",headers:{"Content-Type":"application/json"},body:JSON.stringify(v)});}catch(e){}}
   async function upd(p,v){try{await fetch(url(p),{method:"PATCH",headers:{"Content-Type":"application/json"},body:JSON.stringify(v)});}catch(e){}}
   async function del(p){try{await fetch(url(p),{method:"DELETE"});}catch(e){}}
   function listen(p,cb){
     if(!L[p]){L[p]={cbs:[],last:undefined,t:null};
-      var poll=async function(){var d=await get(p),h=JSON.stringify(d);if(h!==L[p].last){L[p].last=h;L[p].cbs.forEach(function(f){f(d);});}};
+      var poll=async function(){if(p&&p.indexOf(".info")!==-1)return;var d=await get(p),h=JSON.stringify(d);if(h!==L[p].last){L[p].last=h;L[p].cbs.forEach(function(f){f(d);});}};
       poll();L[p].t=setInterval(poll,2000);}
     L[p].cbs.push(cb);
     return function(){if(!L[p])return;L[p].cbs=L[p].cbs.filter(function(f){return f!==cb;});if(!L[p].cbs.length){clearInterval(L[p].t);delete L[p];}};}
@@ -971,15 +973,14 @@ const DB = {
   },
   setupPresence(name){
     if(!window.__fb||window.__fb.DEMO_MODE)return;
-    const {db,ref,set,onValue,onDisconnect}=window.__fb;
+    const {db,ref,set,onDisconnect}=window.__fb;
     const key=name.replace(/[.#$[\]]/g,"_");
     const userRef=ref(db,"users/"+key);
+    // Set online immediately
+    set(userRef,{...S.user,online:true,lastSeen:Date.now()});
+    // Set offline on disconnect
     const od=onDisconnect(userRef);
     if(od&&od.set)od.set({...S.user,online:false,lastSeen:Date.now()});
-    // .info/connected not supported in REST — skip
-    if(false){
-      if(snap.val()===true)set(ref(db,"users/"+key),{...S.user,online:true,lastSeen:Date.now()});
-    });
   }
 };
 
