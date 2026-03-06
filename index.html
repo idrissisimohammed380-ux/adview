@@ -1718,13 +1718,13 @@ function setActiveChat(c){
     UNSUB["msgs_"+c.id]=DB.onMessages(c.id,msgsMap=>{
       if(!msgsMap)return;
       S.messages={...S.messages,[c.id]:msgsMap};
-      render();
+      renderSmart();
     });
   }
   if(UNSUB.typing){UNSUB.typing();delete UNSUB.typing;}
   UNSUB.typing=DB.onTyping(c.id,typingMap=>{
     const others=Object.entries(typingMap||{}).filter(([n,v])=>n!==S.user?.name&&v&&Date.now()-v<5000);
-    S.botTyping=others.length>0;render();
+    S.botTyping=others.length>0;renderSmart();
   });
   render();
 }
@@ -2480,6 +2480,78 @@ function showVipGrantModal(username, currentCode){
    RENDER FUNCTIONS
 ========================================== */
 
+
+/* ════════════════════════════════════════════════
+   SMART RENDER — NO FLASH WHILE TYPING
+   - إذا المستخدم يكتب: تحدث الرسائل فقط بدون مس الـ input
+   - إذا لا يكتب: render كاملة عادية
+════════════════════════════════════════════════ */
+let _renderScheduled = false;
+let _lastRenderType = "full";
+
+function renderSmart(){
+  // إذا الـ input فوكس — render خفيفة
+  const activeEl = document.activeElement;
+  const isTyping = activeEl && activeEl.id === "chat-input";
+
+  if(isTyping){
+    _renderLight();
+  } else {
+    render();
+  }
+}
+
+function _renderLight(){
+  // تحدّث فقط منطقة الرسائل بدون مس الـ input أو إعادة بناء كل شيء
+  const msgsArea = document.getElementById("msgs-area");
+  if(!msgsArea || !S.activeChat) { render(); return; }
+
+  // احفظ الـ input state
+  const inputEl = document.getElementById("chat-input");
+  const savedVal = inputEl ? inputEl.value : (S.input||"");
+  const savedPos = inputEl ? inputEl.selectionStart : 0;
+
+  // أعد بناء الرسائل فقط
+  const chat = S.activeChat;
+  const msgs = Object.values(S.messages[chat.id]||{}).sort((a,b)=>a.ts-b.ts);
+  
+  // مسح محتوى الرسائل فقط
+  msgsArea.innerHTML = "";
+  
+  // أعد بناء الرسائل
+  let lastDate = "";
+  msgs.forEach(m => {
+    const d = dateFmt(m.ts);
+    if(d !== lastDate){
+      lastDate = d;
+      const dl = h("div",{className:"date-divider"});
+      dl.appendChild(h("span",{},d));
+      msgsArea.appendChild(dl);
+    }
+    const el = renderMessage(m, chat);
+    if(el) msgsArea.appendChild(el);
+  });
+
+  // typing indicator
+  if(S.botTyping){
+    const tb = h("div",{style:{display:"flex",alignItems:"flex-end",gap:"8px",marginBottom:"4px"}});
+    const tbl = h("div",{className:"typing-bubble"});
+    for(let i=0;i<3;i++) tbl.appendChild(h("div",{className:"typing-dot"}));
+    tb.appendChild(tbl);
+    msgsArea.appendChild(tb);
+  }
+
+  // scroll
+  const end = document.getElementById("msgs-end");
+  if(end) end.scrollIntoView({behavior:"auto"});
+
+  // استعادة الـ input — لم يُمس
+  if(inputEl && inputEl.value !== savedVal){
+    inputEl.value = savedVal;
+    try{ inputEl.setSelectionRange(savedPos, savedPos); }catch(e){}
+  }
+}
+
 function render(){
   const t=T;
   const root=document.getElementById("root");
@@ -2537,8 +2609,8 @@ function render(){
   if(S.adminToolsModal&&isAdmin())root.appendChild(renderAdminToolsModal());
   if(S.pollModal&&S.activeChat)root.appendChild(renderPollModal(S.activeChat.id));
 
-  // Scroll to bottom
-  setTimeout(()=>{const e=document.getElementById("msgs-end");if(e)e.scrollIntoView({behavior:"smooth"});},50);
+  // Scroll to bottom — only on full render
+  requestAnimationFrame(()=>{const e=document.getElementById("msgs-end");if(e&&!document.getElementById("chat-input")?.matches(":focus"))e.scrollIntoView({behavior:"smooth"});});
 
   // ── Restore input without closing keyboard ──
   if(inputFocused){
@@ -3367,10 +3439,18 @@ function renderChatPanel(){
   textarea.addEventListener("input",e=>{
     if(S.editMsg)S.editTxt=e.target.value;
     else S.input=e.target.value;
+    // resize — NO render() call
     e.target.style.height="auto";
     e.target.style.height=Math.min(e.target.scrollHeight,88)+"px";
+    // update send button directly — no re-render
     const sb=document.getElementById("send-btn");
-    if(sb){const hasText=e.target.value.trim();sb.style.background=hasText?"var(--ac)":"var(--bg3)";sb.style.color=hasText?"#031a03":"var(--t3)";}
+    if(sb){
+      const hasText=e.target.value.trim();
+      sb.style.background=hasText?"linear-gradient(135deg,var(--ac),var(--ac2))":"var(--bg3)";
+      sb.style.color=hasText?"#020c18":"var(--t3)";
+      sb.style.boxShadow=hasText?"0 3px 14px rgba(14,165,233,.45)":"none";
+    }
+    // typing indicator debounced — no render
     sendTypingIndicator(true);
   });
   textarea.addEventListener("keydown",e=>{
