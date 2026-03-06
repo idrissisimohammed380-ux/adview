@@ -2490,35 +2490,22 @@ let _renderScheduled = false;
 let _lastRenderType = "full";
 
 function renderSmart(){
-  // إذا الـ input فوكس — render خفيفة
-  const activeEl = document.activeElement;
-  const isTyping = activeEl && activeEl.id === "chat-input";
-
-  if(isTyping){
-    _renderLight();
-  } else {
-    render();
-  }
+  render(); // render() نفسها تتحقق الآن
 }
 
-function _renderLight(){
-  // تحدّث فقط منطقة الرسائل بدون مس الـ input أو إعادة بناء كل شيء
+function _renderMsgsOnly(){
   const msgsArea = document.getElementById("msgs-area");
-  if(!msgsArea || !S.activeChat) { render(); return; }
+  if(!msgsArea || !S.activeChat) return;
 
-  // احفظ الـ input state
-  const inputEl = document.getElementById("chat-input");
-  const savedVal = inputEl ? inputEl.value : (S.input||"");
-  const savedPos = inputEl ? inputEl.selectionStart : 0;
-
-  // أعد بناء الرسائل فقط
   const chat = S.activeChat;
   const msgs = Object.values(S.messages[chat.id]||{}).sort((a,b)=>a.ts-b.ts);
-  
-  // مسح محتوى الرسائل فقط
+
+  // حفظ scroll position
+  const wasAtBottom = msgsArea.scrollHeight - msgsArea.scrollTop - msgsArea.clientHeight < 80;
+
+  // مسح وإعادة بناء الرسائل فقط
   msgsArea.innerHTML = "";
-  
-  // أعد بناء الرسائل
+
   let lastDate = "";
   msgs.forEach(m => {
     const d = dateFmt(m.ts);
@@ -2534,35 +2521,43 @@ function _renderLight(){
 
   // typing indicator
   if(S.botTyping){
-    const tb = h("div",{style:{display:"flex",alignItems:"flex-end",gap:"8px",marginBottom:"4px"}});
+    const tb = h("div",{style:{display:"flex",alignItems:"flex-end",gap:"8px",marginBottom:"4px",paddingLeft:"8px"}});
     const tbl = h("div",{className:"typing-bubble"});
     for(let i=0;i<3;i++) tbl.appendChild(h("div",{className:"typing-dot"}));
     tb.appendChild(tbl);
     msgsArea.appendChild(tb);
   }
 
-  // scroll
-  const end = document.getElementById("msgs-end");
-  if(end) end.scrollIntoView({behavior:"auto"});
+  // msgs-end marker
+  const endMark = document.createElement("div");
+  endMark.id = "msgs-end";
+  msgsArea.appendChild(endMark);
 
-  // استعادة الـ input — لم يُمس
-  if(inputEl && inputEl.value !== savedVal){
-    inputEl.value = savedVal;
-    try{ inputEl.setSelectionRange(savedPos, savedPos); }catch(e){}
-  }
+  // scroll فقط إذا كان في الأسفل
+  if(wasAtBottom) endMark.scrollIntoView({behavior:"auto"});
 }
+
+let _deferredRender = null;
 
 function render(){
   const t=T;
   const root=document.getElementById("root");
   if(!root)return;
 
-  // ── Save input state before rebuild ──
+  // ── إذا يكتب — أجّل الـ render حتى يتوقف ──
   const activeId = document.activeElement?.id;
+  const inputFocused = activeId === "chat-input";
+
+  if(inputFocused){
+    // حدّث الرسائل فقط بدون مس الـ input
+    _renderMsgsOnly();
+    return;
+  }
+
+  // ── Save input state before rebuild ──
   const inputEl = document.getElementById("chat-input");
   const savedVal = inputEl ? inputEl.value : (S.input||"");
   const savedPos = inputEl ? inputEl.selectionStart : 0;
-  const inputFocused = activeId === "chat-input";
 
   root.innerHTML="";
   document.body.className=""; // always dark
@@ -2612,20 +2607,8 @@ function render(){
   // Scroll to bottom — only on full render
   requestAnimationFrame(()=>{const e=document.getElementById("msgs-end");if(e&&!document.getElementById("chat-input")?.matches(":focus"))e.scrollIntoView({behavior:"smooth"});});
 
-  // ── Restore input without closing keyboard ──
-  if(inputFocused){
-    // use rAF to avoid layout thrash
-    requestAnimationFrame(()=>{
-      const newInp = document.getElementById("chat-input");
-      if(newInp){
-        // restore value and cursor
-        if(newInp.value !== savedVal) newInp.value = savedVal;
-        // focus without scroll to prevent flicker
-        newInp.focus({preventScroll:true});
-        try{ newInp.setSelectionRange(savedPos, savedPos); }catch(e){}
-      }
-    });
-  }
+  // ── Restore focus if needed (not typing) ──
+  // inputFocused = false هنا دائماً لأننا نخرج مبكراً إذا يكتب
 
   // Init particles
   setTimeout(initParticles,100);
