@@ -4248,6 +4248,86 @@ async function closeOnlineGame(){
 }
 
 
+/* ── Rich Text Renderer ── */
+function renderRichText(text, own){
+  const el = document.createElement("div");
+  el.style.cssText = "font-size:13px;line-height:1.5;word-break:break-word;white-space:pre-wrap;";
+  if(!text){return el;}
+  // Bold **text**, italic _text_, code `text`, links
+  let html2 = (text+"")
+    .replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;")
+    .replace(/\*\*(.+?)\*\*/g,"<strong>$1</strong>")
+    .replace(/\_(.+?)\_/g,"<em>$1</em>")
+    .replace(/\`(.+?)\`/g,"<code style='background:rgba(0,0,0,.2);padding:1px 5px;border-radius:4px;font-family:monospace;font-size:11px;'>$1</code>")
+    .replace(/(https?:\/\/[^\s<]+)/g,'<a href="$1" target="_blank" style="color:var(--ac);text-decoration:underline;word-break:break-all;">$1</a>');
+  el.innerHTML = html2;
+  return el;
+}
+
+/* ── Empty State Panel ── */
+function renderEmptyState(){
+  const el = h("div",{style:{display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",height:"100%",gap:"12px",color:"var(--t3)"}});
+  el.appendChild(h("div",{style:{fontSize:"48px"}},"❄️"));
+  el.appendChild(h("div",{style:{fontSize:"14px",fontWeight:"800",color:"var(--t2)"}},"FrostChat"));
+  el.appendChild(h("div",{style:{fontSize:"11px"}}, "Select a chat to start messaging"));
+  return el;
+}
+
+/* ── Open Profile ── */
+function openProfile(name){
+  if(!name || name === S.user?.name) return;
+  S.profSheet = name;
+  render();
+}
+
+/* ── Swipe to Reply ── */
+function attachSwipeReply(row, m){
+  let startX = 0, moved = false;
+  row.addEventListener("touchstart", e=>{ startX = e.touches[0].clientX; moved = false; }, {passive:true});
+  row.addEventListener("touchmove", e=>{
+    const dx = e.touches[0].clientX - startX;
+    const own = row.classList.contains("own");
+    if(own && dx < -30){ moved = true; row.style.transform = "translateX("+Math.max(dx,-60)+"px)"; }
+    else if(!own && dx > 30){ moved = true; row.style.transform = "translateX("+Math.min(dx,60)+"px)"; }
+  }, {passive:true});
+  row.addEventListener("touchend", ()=>{
+    row.style.transform = "";
+    if(moved){ S.replyTo = m; render(); showToast(T.replyingTo + m.from, "↩️"); }
+    moved = false;
+  });
+}
+
+/* ── Message Options (renderOpts) ── */
+function renderOpts(m, own, chat){
+  const menu = h("div",{className:"msg-menu-float",style:{[own?"right":"left"]:"0",top:"calc(100% + 4px)"}});
+  const opts = [];
+  if(!m.deleted){
+    opts.push({ic:"↩️", lb:"Reply",   fn:()=>{S.replyTo=m;S.msgMenu=null;render();showToast(T.replyingTo+m.from,"↩️");}});
+    opts.push({ic:"↗️", lb:"Forward", fn:()=>{S.forwardMsg=m;S.msgMenu=null;render();}});
+    opts.push({ic:"📋", lb:"Copy",    fn:()=>{navigator.clipboard?.writeText(m.text||"");S.msgMenu=null;render();showToast(T.linkCopied,"📋");}});
+    if(own){
+      opts.push({ic:"✏️", lb:"Edit",  fn:()=>{S.editMsg=m.id;S.editTxt=m.text||"";S.msgMenu=null;render();}});
+    }
+    opts.push({ic:"⭐", lb:m.starred?"Unstar":"Star", fn:()=>{DB.updateMessage(chat.id,m.id,{starred:!m.starred});S.msgMenu=null;render();}});
+    opts.push({ic:"📌", lb:m.pinned?"Unpin":"Pin",   fn:()=>{DB.updateMessage(chat.id,m.id,{pinned:!m.pinned});S.msgMenu=null;render();}});
+  }
+  if(own || isAdmin()){
+    opts.push({ic:"🗑️", lb:"Delete", fn:()=>{DB.updateMessage(chat.id,m.id,{deleted:true,text:"This message was deleted"});S.msgMenu=null;render();},danger:true});
+  }
+  opts.forEach(o=>{
+    const btn = h("button",{
+      style:{display:"flex",alignItems:"center",gap:"10px",width:"100%",padding:"8px 12px",background:"none",border:"none",cursor:"pointer",fontSize:"12px",fontWeight:"700",color:o.danger?"#f87171":"var(--t1)",borderRadius:"10px",textAlign:"left",transition:"background .1s"},
+      onClick:o.fn
+    });
+    btn.appendChild(h("span",{},o.ic));
+    btn.appendChild(h("span",{},o.lb));
+    btn.addEventListener("mouseover",()=>btn.style.background="var(--bg3)");
+    btn.addEventListener("mouseout",()=>btn.style.background="none");
+    menu.appendChild(btn);
+  });
+  return menu;
+}
+
 /* ── Image Bubble ── */
 function renderImgBubble(m, own){
   const wrap = h("div",{className:"img-bubble-wrap",onClick:()=>openImgViewer(m.imageUrl, m.caption||m.from)});
