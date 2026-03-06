@@ -2499,36 +2499,77 @@ function _renderMsgsOnly(){
 
   const chat = S.activeChat;
   const msgs = Object.values(S.messages[chat.id]||{}).sort((a,b)=>a.ts-b.ts);
+  const wasAtBottom = msgsArea.scrollHeight - msgsArea.scrollTop - msgsArea.clientHeight < 120;
 
-  // حفظ scroll position
-  const wasAtBottom = msgsArea.scrollHeight - msgsArea.scrollTop - msgsArea.clientHeight < 80;
+  // ── Diffing: فقط أضف الرسائل الجديدة بدون مسح ──
+  const existingIds = new Set(
+    [...msgsArea.querySelectorAll("[data-msg-id]")].map(el => el.dataset.msgId)
+  );
 
-  // مسح وإعادة بناء الرسائل فقط
-  msgsArea.innerHTML = "";
+  // احذف typing indicator القديم
+  const oldTyping = msgsArea.querySelector(".typing-row");
+  if(oldTyping) oldTyping.remove();
 
+  // احذف end marker
+  const oldEnd = document.getElementById("msgs-end");
+  if(oldEnd) oldEnd.remove();
+
+  // أضف فقط الرسائل الجديدة
   let lastDate = "";
+  const allDividers = [...msgsArea.querySelectorAll(".date-divider")];
+  const lastDividerDate = allDividers.length ? allDividers[allDividers.length-1].dataset.date : "";
+
   msgs.forEach(m => {
+    // date divider
     const d = dateFmt(m.ts);
     if(d !== lastDate){
       lastDate = d;
-      const dl = h("div",{className:"date-divider"});
-      dl.appendChild(h("span",{},d));
-      msgsArea.appendChild(dl);
+      if(d !== lastDividerDate && !msgsArea.querySelector(`.date-divider[data-date="${d}"]`)){
+        const dl = h("div",{className:"date-divider"});
+        dl.dataset.date = d;
+        dl.appendChild(h("span",{},d));
+        msgsArea.appendChild(dl);
+      }
     }
-    const el = renderMessage(m, chat);
-    if(el) msgsArea.appendChild(el);
+
+    // تحقق إذا الرسالة موجودة
+    if(existingIds.has(m.id)){
+      // حدّث فقط إذا تغيرت (reactions, deleted, edited)
+      const existing = msgsArea.querySelector(`[data-msg-id="${m.id}"]`);
+      if(existing){
+        const newReactions = JSON.stringify(m.reactions||{});
+        if(existing.dataset.reactions !== newReactions || existing.dataset.deleted !== String(m.deleted)){
+          const newEl = renderMessage(m, chat);
+          if(newEl){
+            newEl.dataset.msgId = m.id;
+            newEl.dataset.reactions = newReactions;
+            newEl.dataset.deleted = String(m.deleted);
+            existing.replaceWith(newEl);
+          }
+        }
+      }
+    } else {
+      // رسالة جديدة — أضفها
+      const el = renderMessage(m, chat);
+      if(el){
+        el.dataset.msgId = m.id;
+        el.dataset.reactions = JSON.stringify(m.reactions||{});
+        el.dataset.deleted = String(m.deleted);
+        msgsArea.appendChild(el);
+      }
+    }
   });
 
   // typing indicator
   if(S.botTyping){
-    const tb = h("div",{style:{display:"flex",alignItems:"flex-end",gap:"8px",marginBottom:"4px",paddingLeft:"8px"}});
+    const tb = h("div",{className:"typing-row",style:{display:"flex",alignItems:"flex-end",gap:"8px",marginBottom:"4px",paddingLeft:"8px"}});
     const tbl = h("div",{className:"typing-bubble"});
     for(let i=0;i<3;i++) tbl.appendChild(h("div",{className:"typing-dot"}));
     tb.appendChild(tbl);
     msgsArea.appendChild(tb);
   }
 
-  // msgs-end marker
+  // end marker
   const endMark = document.createElement("div");
   endMark.id = "msgs-end";
   msgsArea.appendChild(endMark);
@@ -3587,6 +3628,9 @@ function renderMessage(m,chat){
 
   row.appendChild(bubble);
   row.id="msg-"+m.id;
+  wrap.dataset.msgId=m.id;
+  wrap.dataset.reactions=JSON.stringify(m.reactions||{});
+  wrap.dataset.deleted=String(m.deleted||false);
 
   // Quick reactions
   const qr=h("div",{className:"quick-rxn-bar",style:{display:S.msgMenu===m.id?"flex":"none",flexDirection:own?"row-reverse":"row",justifyContent:own?"flex-start":"flex-start"}});
