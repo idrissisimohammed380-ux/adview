@@ -152,7 +152,7 @@ html,body{height:100%;background:var(--bg);color:var(--tx);font-family:'Cairo',s
     <div class="bal-card">
       <div class="bal-label">رصيدك الإجمالي</div>
       <div class="bal-amount" id="balAmt">$0.00</div>
-      <div class="bal-pts" id="balPts">0 نقطة · الحد الأدنى للسحب 500 نقطة ($5)</div>
+      <div class="bal-pts" id="balPts">0 نقطة · الحد الأدنى للسحب 2000 نقطة ($20)</div>
       <div class="bal-row">
         <div class="bal-stat"><div class="bal-stat-v" id="statW">0</div><div class="bal-stat-l">مشاهدة</div></div>
         <div class="bal-stat"><div class="bal-stat-v" id="statP">0</div><div class="bal-stat-l">نقطة</div></div>
@@ -174,8 +174,8 @@ html,body{height:100%;background:var(--bg);color:var(--tx);font-family:'Cairo',s
     <div class="how-card">
       <div class="how-title">كيف يعمل النظام؟</div>
       <div class="how-step"><div class="how-num">1</div><div class="how-text">اضغط على زر المشاهدة وانتظر 30 ثانية</div></div>
-      <div class="how-step"><div class="how-num">2</div><div class="how-text">100 نقطة = $1 — الحد الأدنى للسحب 500 نقطة ($5)</div></div>
-      <div class="how-step"><div class="how-num">3</div><div class="how-text">اطلب السحب وسيتم إرساله خلال 24-48 ساعة</div></div>
+      <div class="how-step"><div class="how-num">2</div><div class="how-text">100 نقطة = $1 — الحد الأدنى للسحب 2000 نقطة ($20)</div></div>
+      <div class="how-step"><div class="how-num">3</div><div class="how-text">شارك الموقع مع 10 أصدقاء لتفعيل طلب السحب</div></div>
     </div>
 
     <button class="wd-btn" onclick="openWd()">💸 طلب سحب الأرباح</button>
@@ -193,6 +193,8 @@ html,body{height:100%;background:var(--bg);color:var(--tx);font-family:'Cairo',s
     <div class="wrow"><span class="wk">النقاط المتاحة</span><span class="wv gd" id="wPts">0 pts</span></div>
     <div class="wrow"><span class="wk">القيمة بالدولار</span><span class="wv gd" id="wUsd">$0.00</span></div>
     <div class="wrow"><span class="wk">رسوم التحويل</span><span class="wv">مجاناً ✅</span></div>
+    <div class="wrow"><span class="wk">المشاركات</span><span class="wv gd" id="wShared">0/10 أصدقاء</span></div>
+    <button class="abtn2 sec" onclick="shareApp()" style="margin-bottom:8px">📤 شارك مع صديق (+1)</button>
     <div class="wrow"><span class="wk">ستحصل على</span><span class="wv gr" id="wGet">$0.00</span></div>
     <br>
     <button class="abtn2 pri" onclick="doWd()">إرسال طلب السحب →</button>
@@ -203,7 +205,7 @@ html,body{height:100%;background:var(--bg);color:var(--tx);font-family:'Cairo',s
 <div class="toast" id="tst"></div>
 
 <script>
-let pts=0,watched=0,wdCount=0,selMeth='paypal',user=null;
+let pts=0,watched=0,wdCount=0,selMeth='paypal',user=null,shared=0;
 let watching=false,wTimer=null,wEl=0;
 const meths=[
   {id:'paypal',ico:'💙',n:'PayPal',d:'الأسرع — يرسله المشرف مباشرة'},
@@ -218,14 +220,15 @@ function updateUI(){
   const usd=(pts/100).toFixed(2);
   g('balAmt').textContent='$'+usd;
   g('balChip').textContent='$'+usd;
-  g('balPts').textContent=pts+' نقطة · الحد الأدنى للسحب 500 نقطة ($5)';
+  g('balPts').textContent=pts+' نقطة · الحد الأدنى للسحب 2000 نقطة ($20)';
   g('statW').textContent=watched;
   g('statP').textContent=pts;
   g('statWd').textContent=wdCount;
   g('wPts').textContent=pts+' pts';
   g('wUsd').textContent='$'+usd;
   g('wGet').textContent='$'+usd;
-  localStorage.setItem('av_data',JSON.stringify({pts,watched,wdCount}));
+  if(g('wShared'))g('wShared').textContent=shared+'/10 أصدقاء';
+  localStorage.setItem('av_data',JSON.stringify({pts,watched,wdCount,shared}));
 }
 function login(method){
   const names={google:'مستخدم Google',paypal:'مستخدم PayPal',guest:'ضيف'};
@@ -250,12 +253,26 @@ function openWd(){
   g('methGrid').innerHTML=meths.map(m=>`<div class="meth ${m.id===selMeth?'on':''}" onclick="selMeth='${m.id}';openWd()"><div class="meth-ico">${m.ico}</div><div><div class="meth-n">${m.n}</div><div class="meth-d">${m.d}</div></div></div>`).join('');
   updateUI();g('shWd').classList.add('on');
 }
+function shareApp(){
+  const url='https://idrissisimohammed380-ux.github.io/adview/';
+  const msg='💰 اربح دولارات حقيقية من مشاهدة الإعلانات! '+url;
+  if(navigator.share){
+    navigator.share({title:'AdView',text:msg,url:url}).then(()=>{shared++;updateUI();toast('✅ شكراً! '+shared+'/10 مشاركة','ok')});
+  } else {
+    navigator.clipboard.writeText(msg).then(()=>{shared++;updateUI();toast('✅ تم نسخ الرابط! '+shared+'/10 مشاركة','ok')});
+  }
+}
 function doWd(){
   if(!user||user.method==='guest'){toast('يجب تسجيل الدخول أولاً','err');return}
-  if(pts<500){toast('الحد الأدنى 500 نقطة ($5)','err');return}
+  if(pts<2000){toast('الحد الأدنى 2000 نقطة ($20)','err');return}
+  if(shared<10){
+    toast('يجب مشاركة الموقع مع 10 أصدقاء أولاً ('+shared+'/10)','err');
+    setTimeout(()=>shareApp(),500);
+    return;
+  }
   const addr=g('wAddr').value.trim();
   if(!addr){toast('أدخل عنوان PayPal أو البريد الإلكتروني','err');return}
-  wdCount++;pts=0;updateUI();
+  wdCount++;pts=0;shared=0;updateUI();
   g('shWd').classList.remove('on');
   toast('✅ تم إرسال طلب السحب! مراجعة خلال 24-48 ساعة','ok');
 }
@@ -263,7 +280,7 @@ function doWd(){
   const u=localStorage.getItem('av_u');
   const d=localStorage.getItem('av_data');
   try{if(u)user=JSON.parse(u)}catch(e){}
-  try{if(d){const p=JSON.parse(d);pts=p.pts||0;watched=p.watched||0;wdCount=p.wdCount||0}}catch(e){}
+  try{if(d){const p=JSON.parse(d);pts=p.pts||0;watched=p.watched||0;wdCount=p.wdCount||0;shared=p.shared||0}}catch(e){}
   if(user){scr('sApp');updateUI()}
 })();
 </script>
